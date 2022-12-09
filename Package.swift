@@ -14,6 +14,7 @@ let package = Package(
         .library(name: "ComposableUserNotifications", targets: ["ComposableUserNotifications"]),
         .library(name: "TCAHelpers", targets: ["TCAHelpers"]),
         .library(name: "SwiftUIHelpers", targets: ["SwiftUIHelpers"]),
+        .library(name: "SwiftUIExtension", targets: ["SwiftUIExtension"]),
         .library(name: "Models", targets: ["Models"]),
 
         // MARK: - clients
@@ -37,7 +38,7 @@ let package = Package(
                 "Build", "UserDefaultsClient", "InfoPlist", "FoundationExtension",
                 "ComposableUserNotifications", "ComposableStoreKit", "UIApplicationClient",
                 "TCAHelpers", "SwiftUIHelpers", "KeychainClient",
-                "Models", "Analytics"
+                "Models", "Analytics", "SwiftUIExtension"
             ]),
 
         .target(
@@ -90,7 +91,8 @@ let package = Package(
 
         .target(name: "InfoPlist", resources: [.process("Resources/")]),
         .target(name: "FoundationExtension"),
-        .target(name: "SwiftUIHelpers"),
+        .target(name: "SwiftUIHelpers", dependencies: ["SwiftUIExtension"]),
+        .target(name: "SwiftUIExtension"),
         .target(name: "Models"),
         .target(name: "Analytics"),
 
