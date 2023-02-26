@@ -7,6 +7,16 @@
 
 import AVFoundation
 import SwiftUI
+import os.log
+
+/// if isHeicSupported, let heicData = image.heic {
+///     // write your heic image data to disk
+/// }
+/// or adding compression to your image:
+///
+/// if isHeicSupported, let heicData = image.heic(compressionQuality: 0.75) {
+///     // write your compressed heic image data to disk
+/// }
 
 #if os(iOS)
   import UIKit
@@ -46,31 +56,24 @@ extension UIImage {
       (CGImageDestinationCopyTypeIdentifiers() as! [String]).contains("public.heic")
   }
 
-  public func compressImage(_ compressionQuality: JPEGQuality? = .medium) -> (Data?, String) {
+  public func compressImage(_ compressionQuality: JPEGQuality = .medium) -> (Data?, String) {
 
-    if isHeicSupported {
-      do {
-        let data = try heicData(compressionQuality: compressionQuality!)
-        return (data, "heic")
-      } catch {
-        print("Error creating HEIC data: \(error.localizedDescription)")
-      }
-    } else {
-      #if os(iOS)
-        guard let data = jpegData(compressionQuality: compressionQuality!.rawValue) else {
-          return (nil, "")
-        }
+      if isHeicSupported, let heicData = heic(compressionQuality: compressionQuality) {
+          // write your heic image data to disk
+          return (heicData, "heic")
+      } else {
+          #if os(iOS)
+            guard let data = jpegData(compressionQuality: compressionQuality.rawValue) else {
+              return (nil, "")
+            }
 
-        return (data, "jpeg")
+            return (data, "jpeg")
 
-      #elseif os(OSX)
-        fatalError("Value of type 'NSImage' has no member 'jpegData'")
-      #endif
+          #elseif os(OSX)
+            fatalError("Value of type 'NSImage' has no member 'jpegData'")
+          #endif
     }
-
-    return (nil, "")
   }
-
 }
 
 extension UIImage {
@@ -79,48 +82,49 @@ extension UIImage {
     case cgImageMissing
     case couldNotFinalize
   }
-
-  public func heicData(compressionQuality: JPEGQuality) throws -> Data {
-    let data = NSMutableData()
-    guard
-      let imageDestination =
-        CGImageDestinationCreateWithData(
-          data, AVFileType.heic as CFString, 1, nil
-        )
-    else {
-      throw HEICError.heicNotSupported
-    }
-
-    guard let cgImage = self.cgImage else {
-      throw HEICError.cgImageMissing
-    }
-
-    let options: NSDictionary = [
-      kCGImageDestinationLossyCompressionQuality: compressionQuality.rawValue
-    ]
-
-    CGImageDestinationAddImage(imageDestination, cgImage, options)
-    guard CGImageDestinationFinalize(imageDestination) else {
-      throw HEICError.couldNotFinalize
-    }
-
-    return data as Data
-  }
 }
 
 extension UIImage {
-    public func heicData2(compressionQuality: JPEGQuality) -> Data? {
-        let destinationData = NSMutableData()
 
+    func heic(compressionQuality: JPEGQuality) -> Data? {
+        // AVFileType.heic == "public.heic"
         guard
-            let cgImage = self.cgImage,
-            let destination = CGImageDestinationCreateWithData(destinationData, AVFileType.heic as CFString, 1, nil)
-            else { return nil }
-
-        let options = [kCGImageDestinationLossyCompressionQuality: compressionQuality]
-        CGImageDestinationAddImage(destination, cgImage, options as CFDictionary)
-        CGImageDestinationFinalize(destination)
-
-        return destinationData as Data
+            let mutableData = CFDataCreateMutable(nil, 0),
+            let destination = CGImageDestinationCreateWithData(mutableData, "public.heic" as CFString, 1, nil),
+            let cgImage = cgImage
+        else {
+            logger.debug("heic compressionQuality mutableData, destination or cgImage nil")
+            return nil
+        }
+        CGImageDestinationAddImage(destination, cgImage, [kCGImageDestinationLossyCompressionQuality: compressionQuality, kCGImagePropertyOrientation: cgImageOrientation.rawValue] as CFDictionary)
+        guard CGImageDestinationFinalize(destination) else {
+            logger.debug("CGImageDestinationFinalize nil")
+            return nil
+        }
+        return mutableData as Data
     }
 }
+
+extension UIImage {
+    var cgImageOrientation: CGImagePropertyOrientation { .init(imageOrientation) }
+}
+
+extension CGImagePropertyOrientation {
+    init(_ uiOrientation: UIImage.Orientation) {
+        switch uiOrientation {
+            case .up: self = .up
+            case .upMirrored: self = .upMirrored
+            case .down: self = .down
+            case .downMirrored: self = .downMirrored
+            case .left: self = .left
+            case .leftMirrored: self = .leftMirrored
+            case .right: self = .right
+            case .rightMirrored: self = .rightMirrored
+        @unknown default:
+            logger.error("unknown default uiOrientation missing")
+            fatalError()
+        }
+    }
+}
+
+fileprivate let logger = Logger(subsystem: "com.addame.AddaMeIOS", category: "Image+Compress")

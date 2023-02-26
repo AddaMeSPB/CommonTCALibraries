@@ -27,7 +27,6 @@ extension UserNotificationClient: DependencyKey {
           let notifications = await UNUserNotificationCenter.current().pendingNotificationRequests()
           return notifications.map { Notification.init(date: Date(), request: $0) }
 
-
 //          client.pendingNotificationRequests = {
 //            let requests = await center.pendingNotificationRequests()
 //            return requests.map(Notification.Request.init(rawValue:))

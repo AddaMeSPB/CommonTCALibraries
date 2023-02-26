@@ -14,6 +14,7 @@ public enum UserDefaultKey: String, CaseIterable {
          cllocation,
          distance,
          isUserFirstNameEmpty,
+         isAskPermissionCompleted,
          isFormFillUpCompleted
 
     case userName,

@@ -1,7 +1,7 @@
 import SwiftUI
 
 public struct Preview<Content: View>: View {
-  let content: Content
+  public let content: Content
 
   public init(@ViewBuilder _ content: () -> Content) {
     self.content = content()
@@ -13,14 +13,14 @@ public struct Preview<Content: View>: View {
         .environment(\.colorScheme, .light)
         .preferredColorScheme(.light)
         .navigationBarHidden(true)
-        .previewDevice("iPhone 12 Pro")
+        .previewDevice("iPhone 12")
         .previewDisplayName("Pro, light mode")
 
       self.content
         .environment(\.colorScheme, .dark)
         .preferredColorScheme(.dark)
         .navigationBarHidden(true)
-        .previewDevice("iPhone 12 mini")
+        .previewDevice("iPhone 14")
         .previewDisplayName("Mini, dark mode")
     }
   }

@@ -20,7 +20,7 @@ public struct PagingView<Content>: View where Content: View {
     }
 
     public var body: some View {
-        ZStack(alignment: .topLeading) {
+        ZStack(alignment: .bottomLeading) {
 
             GeometryReader { geometry in
                 ScrollView(.horizontal, showsIndicators: false) {
