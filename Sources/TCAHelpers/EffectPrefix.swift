@@ -1,7 +1,7 @@
 import Combine
 import ComposableArchitecture
 
-extension Effect {
+extension EffectTask {
   public func prefix(id: AnyHashable, _ maxLength: Int) -> Self {
     Deferred { () -> AnyPublisher<Output, Failure> in
       if counts[id] ?? 0 > maxLength {
