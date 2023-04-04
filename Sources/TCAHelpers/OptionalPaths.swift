@@ -169,7 +169,7 @@ extension ReducerProtocol {
   >(
     state toChildState: StatePath,
     action toChildAction: ActionPath,
-    @ReducerBuilderOf<Child> then child: () -> Child,
+    @ReducerBuilder<Child, Action> then child: () -> Child,
     file: StaticString = #file,
     line: UInt = #line
   ) -> OptionalPathReducer<StatePath, ActionPath, Self, Child> {

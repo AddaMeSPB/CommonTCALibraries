@@ -32,7 +32,7 @@ let package = Package(
         .library(name: "CoreLocationClient", targets: ["CoreLocationClient"]),
     ],
     dependencies: [
-        .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "0.52.0"),
+        .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "0.53.2"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "0.1.0"),
         .package(url: "https://github.com/pointfreeco/swift-tagged", from: "0.6.0"),
         .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "0.1.0")

@@ -42,21 +42,22 @@ import os.log
 
 #endif
 
+public enum CompressionQuality: CGFloat {
+  case lowest = 0
+  case low = 0.25
+  case medium = 0.5
+  case high = 0.75
+  case highest = 1
+}
+
 extension UIImage {
-  public enum JPEGQuality: CGFloat {
-    case lowest = 0
-    case low = 0.25
-    case medium = 0.5
-    case high = 0.75
-    case highest = 1
-  }
 
   private var isHeicSupported: Bool {
     // swiftlint:disable force_cast
       (CGImageDestinationCopyTypeIdentifiers() as! [String]).contains("public.heic")
   }
 
-  public func compressImage(_ compressionQuality: JPEGQuality = .medium) -> (Data?, String) {
+    public func compressImage(_ compressionQuality: CompressionQuality) -> (Data?, String) {
 
       if isHeicSupported, let heicData = heic(compressionQuality: compressionQuality) {
           // write your heic image data to disk
@@ -70,6 +71,7 @@ extension UIImage {
             return (data, "jpeg")
 
           #elseif os(OSX)
+          logger.debug("Value of type 'NSImage' has no member 'jpegData'")
             fatalError("Value of type 'NSImage' has no member 'jpegData'")
           #endif
     }
@@ -86,8 +88,7 @@ extension UIImage {
 
 extension UIImage {
 
-    func heic(compressionQuality: JPEGQuality) -> Data? {
-        // AVFileType.heic == "public.heic"
+    func heic(compressionQuality: CompressionQuality) -> Data? {
         guard
             let mutableData = CFDataCreateMutable(nil, 0),
             let destination = CGImageDestinationCreateWithData(mutableData, "public.heic" as CFString, 1, nil),
@@ -96,13 +97,23 @@ extension UIImage {
             logger.debug("heic compressionQuality mutableData, destination or cgImage nil")
             return nil
         }
-        CGImageDestinationAddImage(destination, cgImage, [kCGImageDestinationLossyCompressionQuality: compressionQuality, kCGImagePropertyOrientation: cgImageOrientation.rawValue] as CFDictionary)
-        guard CGImageDestinationFinalize(destination) else {
+
+        CGImageDestinationAddImage(
+            destination,
+            cgImage,
+            [kCGImageDestinationLossyCompressionQuality: compressionQuality.rawValue, kCGImagePropertyOrientation: cgImageOrientation.rawValue] as CFDictionary
+        )
+
+        guard
+            CGImageDestinationFinalize(destination)
+        else {
             logger.debug("CGImageDestinationFinalize nil")
             return nil
         }
+
         return mutableData as Data
     }
+
 }
 
 extension UIImage {
