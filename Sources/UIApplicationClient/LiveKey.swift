@@ -1,3 +1,5 @@
+#if canImport(UIKit)
+
 import UIKit
 import Dependencies
 
@@ -26,3 +28,4 @@ extension UIApplicationClient: DependencyKey {
     supportsAlternateIconsAsync: { await UIApplication.shared.supportsAlternateIcons }
   )
 }
+#endif
