@@ -245,7 +245,10 @@ extension UIImage {
         CGImageDestinationAddImage(
             destination,
             cgImage,
-            [kCGImageDestinationLossyCompressionQuality: compressionQuality.rawValue, kCGImagePropertyOrientation: cgImageOrientation.rawValue] as CFDictionary
+            [
+                kCGImageDestinationLossyCompressionQuality: compressionQuality.rawValue,
+                kCGImagePropertyOrientation: cgImageOrientation.rawValue
+            ] as CFDictionary
         )
 
         guard

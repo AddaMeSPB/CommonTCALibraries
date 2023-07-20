@@ -20,6 +20,10 @@ let package = Package(
         .library(name: "NotificationHelpers", targets: ["NotificationHelpers"]),
 
 
+        // MARK: - Logger
+        .library(name: "LoggerKit", targets: ["LoggerKit"]),
+
+
         // MARK: - Clients
         .library(name: "UserDefaultsClient", targets: ["UserDefaultsClient"]),
         .library(name: "InfoPlist", targets: ["InfoPlist"]),
@@ -46,8 +50,8 @@ let package = Package(
                 "Build", "UserDefaultsClient", "InfoPlist", "FoundationExtension",
                 "ComposableUserNotifications", "ComposableStoreKit", "UIApplicationClient",
                 "TCAHelpers", "SwiftUIHelpers", "KeychainClient", "IDFAClient",
-                 "Analytics", "SwiftUIExtension", "PathMonitorClient", "NotificationHelpers",
-                "RemoteNotificationsClient", "CoreLocationClient"
+                "Analytics", "SwiftUIExtension", "PathMonitorClient", "NotificationHelpers",
+                "RemoteNotificationsClient", "CoreLocationClient", "LoggerKit"
             ]),
 
         .target(
@@ -141,6 +145,7 @@ let package = Package(
         .target(name: "SwiftUIHelpers", dependencies: ["SwiftUIExtension"]),
         .target(name: "SwiftUIExtension"),
         .target(name: "Analytics"),
+        .target(name: "LoggerKit")
 
     ]
 )
