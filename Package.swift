@@ -6,7 +6,8 @@ import PackageDescription
 let package = Package(
     name: "CommonTCALibraries",
     platforms: [
-        .iOS(.v14)
+        .iOS(.v14),
+        .macOS(.v12)
     ],
     products: [
         .library(name: "CommonTCALibraries", targets: ["CommonTCALibraries"]),
