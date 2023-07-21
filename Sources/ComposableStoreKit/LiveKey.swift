@@ -1,5 +1,5 @@
-import ComposableArchitecture
 import StoreKit
+import Dependencies
 
 @available(iOSApplicationExtension, unavailable)
 extension StoreKitClient: DependencyKey {

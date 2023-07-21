@@ -1,6 +1,6 @@
 import Combine
-import ComposableArchitecture
 import UserNotifications
+import Dependencies
 
 extension UserNotificationClient: DependencyKey {
     public static let liveValue = Self(

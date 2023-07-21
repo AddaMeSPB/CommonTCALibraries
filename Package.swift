@@ -9,9 +9,9 @@ let package = Package(
         .iOS(.v14),
         .macOS(.v12)
     ],
+
     products: [
         .library(name: "CommonTCALibraries", targets: ["CommonTCALibraries"]),
-        .library(name: "Analytics", targets: ["Analytics"]),
         .library(name: "Build", targets: ["Build"]),
         .library(name: "ComposableStoreKit", targets: ["ComposableStoreKit"]),
         .library(name: "ComposableUserNotifications", targets: ["ComposableUserNotifications"]),
@@ -20,10 +20,8 @@ let package = Package(
         .library(name: "SwiftUIExtension", targets: ["SwiftUIExtension"]),
         .library(name: "NotificationHelpers", targets: ["NotificationHelpers"]),
 
-
         // MARK: - Logger
         .library(name: "LoggerKit", targets: ["LoggerKit"]),
-
 
         // MARK: - Clients
         .library(name: "UserDefaultsClient", targets: ["UserDefaultsClient"]),
@@ -34,16 +32,17 @@ let package = Package(
         .library(name: "RemoteNotificationsClient", targets: ["RemoteNotificationsClient"]),
         .library(name: "PathMonitorClient", targets: ["PathMonitorClient"]),
         .library(name: "IDFAClient", targets: ["IDFAClient"]),
-        .library(name: "CoreLocationClient", targets: ["CoreLocationClient"]),
+        .library(name: "CoreLocationClient", targets: ["CoreLocationClient"])
     ],
+
     dependencies: [
-        .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "0.53.2"),
+        .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "0.56.0"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "0.1.0"),
         .package(url: "https://github.com/pointfreeco/swift-tagged", from: "0.6.0"),
         .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "0.1.0")
     ],
-    targets: [
 
+    targets: [
         .target(
             name: "CommonTCALibraries",
             dependencies: [
@@ -51,9 +50,10 @@ let package = Package(
                 "Build", "UserDefaultsClient", "InfoPlist", "FoundationExtension",
                 "ComposableUserNotifications", "ComposableStoreKit", "UIApplicationClient",
                 "TCAHelpers", "SwiftUIHelpers", "KeychainClient", "IDFAClient",
-                "Analytics", "SwiftUIExtension", "PathMonitorClient", "NotificationHelpers",
+                "SwiftUIExtension", "PathMonitorClient", "NotificationHelpers",
                 "RemoteNotificationsClient", "CoreLocationClient", "LoggerKit"
-            ]),
+            ]
+        ),
 
         .target(
             name: "Build",
@@ -61,7 +61,8 @@ let package = Package(
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "Tagged", package: "swift-tagged"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
-            ]),
+            ]
+        ),
 
         .target(
             name: "IDFAClient",
@@ -69,69 +70,80 @@ let package = Package(
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
                 "FoundationExtension"
-            ]),
+            ]
+        ),
 
         .target(
             name: "UserDefaultsClient",
             dependencies: [
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
-            ]),
+                .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay")
+            ]
+        ),
 
         .target(
             name: "ComposableUserNotifications",
             dependencies: [
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+                .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
-            ]),
+            ]
+        ),
 
         .target(
             name: "ComposableStoreKit",
             dependencies: [
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+                .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
                 "UserDefaultsClient", "InfoPlist"
-            ]),
+            ]
+        ),
 
         .target(
             name: "UIApplicationClient",
             dependencies: [
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+                .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
-            ]),
+            ]
+        ),
 
         .target(
             name: "TCAHelpers",
             dependencies: [
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
-            ]),
+            ]
+        ),
 
         .target(
             name: "KeychainClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 "FoundationExtension"
-            ]),
+            ]
+        ),
 
         .target(
             name: "PathMonitorClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
                 "FoundationExtension"
-            ]),
+            ]
+        ),
 
         .target(
             name: "RemoteNotificationsClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
-            ]),
+                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay")
+            ]
+        ),
 
         .target(
           name: "NotificationHelpers",
           dependencies: [
-            "ComposableUserNotifications",
-            "RemoteNotificationsClient",
-            .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
-          ]),
+            "ComposableUserNotifications", "RemoteNotificationsClient"
+          ]
+        ),
 
         .target(
             name: "CoreLocationClient",
@@ -145,7 +157,6 @@ let package = Package(
         .target(name: "FoundationExtension"),
         .target(name: "SwiftUIHelpers", dependencies: ["SwiftUIExtension"]),
         .target(name: "SwiftUIExtension"),
-        .target(name: "Analytics"),
         .target(name: "LoggerKit")
 
     ]

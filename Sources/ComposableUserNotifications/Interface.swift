@@ -1,5 +1,4 @@
 import Combine
-import ComposableArchitecture
 import UserNotifications
 
 public struct UserNotificationClient {
