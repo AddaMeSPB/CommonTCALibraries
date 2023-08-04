@@ -15,7 +15,6 @@ let package = Package(
         .library(name: "Build", targets: ["Build"]),
         .library(name: "ComposableStoreKit", targets: ["ComposableStoreKit"]),
         .library(name: "ComposableUserNotifications", targets: ["ComposableUserNotifications"]),
-        .library(name: "TCAHelpers", targets: ["TCAHelpers"]),
         .library(name: "SwiftUIHelpers", targets: ["SwiftUIHelpers"]),
         .library(name: "SwiftUIExtension", targets: ["SwiftUIExtension"]),
         .library(name: "NotificationHelpers", targets: ["NotificationHelpers"]),
@@ -49,7 +48,7 @@ let package = Package(
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
                 "Build", "UserDefaultsClient", "InfoPlist", "FoundationExtension",
                 "ComposableUserNotifications", "ComposableStoreKit", "UIApplicationClient",
-                "TCAHelpers", "SwiftUIHelpers", "KeychainClient", "IDFAClient",
+                "SwiftUIHelpers", "KeychainClient", "IDFAClient",
                 "SwiftUIExtension", "PathMonitorClient", "NotificationHelpers",
                 "RemoteNotificationsClient", "CoreLocationClient", "LoggerKit"
             ]
@@ -103,13 +102,6 @@ let package = Package(
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
-            ]
-        ),
-
-        .target(
-            name: "TCAHelpers",
-            dependencies: [
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
             ]
         ),
 
