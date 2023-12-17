@@ -27,12 +27,19 @@ public struct TextViewFromUIKit: UIViewRepresentable {
     }
 
     public func updateUIView(_ textView: UITextView, context: UIViewRepresentableContext<TextViewFromUIKit>) {
-//        if textView.text != self.text {
             textView.text = self.text
             textView.backgroundColor = .clear
             textView.font = self.font
-            textView.textColor = UIColor.black
-//        }
+
+            textView.textColor =  UIColor { tc in
+                 switch tc.userInterfaceStyle {
+                 case .dark:
+                     return UIColor.white
+                 default:
+                     return UIColor.black
+                 }
+             }
+
     }
 
     public func makeCoordinator() -> Coordinator {
@@ -51,6 +58,7 @@ public struct TextViewFromUIKit: UIViewRepresentable {
             // Or use e.g. `min(contentSize.height, 150)` if you want to restrict max height
             CGSize(width: UIView.noIntrinsicMetric, height: min(contentSize.height, 80))
         }
+        
     }
 
     final public class Coordinator: NSObject, UITextViewDelegate {
