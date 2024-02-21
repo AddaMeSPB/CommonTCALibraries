@@ -3,6 +3,7 @@ import Foundation
 import XCTestDynamicOverlay
 
 extension UserDefaultsClient: TestDependencyKey {
+
   public static let previewValue = Self.noop
 
   public static let testValue = Self(

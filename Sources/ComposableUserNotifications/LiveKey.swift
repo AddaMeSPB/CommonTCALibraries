@@ -15,6 +15,7 @@ extension UserNotificationClient: DependencyKey {
           }
         }
       },
+      
       getNotificationSettings: {
         await Notification.Settings(
           rawValue: UNUserNotificationCenter.current().notificationSettings()
@@ -29,33 +30,20 @@ extension UserNotificationClient: DependencyKey {
       pendingNotifications: {
           let notifications = await UNUserNotificationCenter.current().pendingNotificationRequests()
           return notifications.map { Notification.init(date: Date(), request: $0) }
-
-//          client.pendingNotificationRequests = {
-//            let requests = await center.pendingNotificationRequests()
-//            return requests.map(Notification.Request.init(rawValue:))
-//          }
-
       },
-
-//      #if os(iOS) || os(macOS) || targetEnvironment(macCatalyst)
-//      client.getDeliveredNotifications = {
-//        .future { callback in
-//          center.getDeliveredNotifications { notifications in
-//            callback(.success(notifications.map(Notification.init(rawValue:))))
-//          }
-//        }
-//      }
-//      #endif
 
       removeDeliveredNotificationsWithIdentifiers: {
         UNUserNotificationCenter.current().removeDeliveredNotifications(withIdentifiers: $0)
       },
+
       removePendingNotificationRequestsWithIdentifiers: {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: $0)
       },
+      
       removeAllPendingNotificationRequests: {
           UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
       },
+      
       requestAuthorization: {
         try await UNUserNotificationCenter.current().requestAuthorization(options: $0)
       }

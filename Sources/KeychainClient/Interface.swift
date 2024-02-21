@@ -5,26 +5,15 @@ import FoundationExtension
 import os
 
 public enum ServiceKeys: NSString {
-  case token, deviceToken, voipToken, user, mobileNumbers, serverContacts, deviceinfo,
-    cllocation2d
+    case token, deviceToken, voipToken, user, mobileNumbers, serverContacts, deviceinfo, cllocation2d
 }
 
 public struct KeychainClient {
-
     enum KeychainError: Error {
-        // Attempted read for an item that does not exist.
         case itemNotFound
-
-        // Attempted save to override an existing item.
-        // Use update instead of save to update existing items
         case duplicateItem
-
-        // A read of an item in any format other than Data
         case invalidItemFormat
-
-        // Any operation result status than errSecSuccess
         case unexpectedStatus(OSStatus)
-
         case errorStatus(String?)
 
         init(status: OSStatus) {
@@ -40,17 +29,17 @@ public struct KeychainClient {
         }
     }
 
-    public typealias SavehHandler = @Sendable (
+    public typealias SaveHandler = @Sendable (
         _ data: Data,
         _ service: ServiceKeys,
         _ account: String
-    )  async throws -> Void
-
+    ) async throws -> Void
+    
     public typealias ReadHandler = @Sendable (
         _ service: ServiceKeys,
         _ account: String
     ) throws -> Data
-
+    
     public typealias UpdateHandler = @Sendable (
         _ data: Data,
         _ service: ServiceKeys,
@@ -62,13 +51,14 @@ public struct KeychainClient {
         _ account: String
     ) async throws -> Void
 
-    var save: SavehHandler
+    var save: SaveHandler
     var read: ReadHandler
     var update: UpdateHandler
     var delete: DeleteHandler
 
+    /// Initializes a new KeychainClient with specified handlers for keychain operations.
     public init(
-        save: @escaping SavehHandler,
+        save: @escaping SaveHandler,
         read: @escaping ReadHandler,
         update: @escaping UpdateHandler,
         delete: @escaping DeleteHandler
@@ -79,120 +69,108 @@ public struct KeychainClient {
         self.delete = delete
     }
 
-    @Sendable public func saveCodable<T: Codable>(
+    /// Saves a Codable item to the keychain. If the item already exists, it updates the existing item.
+    /// - Parameters:
+    ///   - item: The Codable item to save.
+    ///   - service: The keychain service under which to save the item.
+    ///   - account: The account name associated with the item.
+    @Sendable public func saveOrUpdateCodable<T: Codable>(
         _ item: T,
         _ service: ServiceKeys,
         _ account: String
     ) async throws -> Void {
+        let data = try JSONEncoder().encode(item)
         do {
-            // Encode as JSON data and save in keychain
-            let data = try JSONEncoder().encode(item)
             try await save(data, service, account)
-
+        } catch KeychainError.duplicateItem {
+            try await update(data, service, account)
         } catch {
-            // 92 The operation couldn’t be completed.
-            // (KeychainClient.KeychainClient.KeychainError error 3.)
-
-            logger.error("\(#file) \(#line) saveCodable: \(error.localizedDescription)")
-            throw error.localizedDescription
+            logger.error("\(#file) \(#line) saveOrUpdateCodable: \(error.localizedDescription)")
+            throw error
         }
     }
 
+    /// Reads and decodes a Codable item from the keychain.
+    /// - Parameters:
+    ///   - service: The keychain service from which to read the item.
+    ///   - account: The account name associated with the item.
+    ///   - type: The type of the Codable item to read.
+    /// - Returns: The decoded item.
     @Sendable public func readCodable<T: Codable>(
         _ service: ServiceKeys,
         _ account: String,
         _ type: T.Type
     ) throws -> T {
-        do {
-            // Read item data from keychain
-            let data = try read(service, account)
-
-            // Decode JSON data to object
-            let item = try JSONDecoder().decode(type, from: data)
-            return item
-        } catch {
-            logger.error("\(#file) \(#line) readCodable: \(error.localizedDescription)")
-            throw KeychainError.itemNotFound
-        }
+        let data = try read(service, account)
+        return try JSONDecoder().decode(type, from: data)
     }
 
-    @Sendable public func updateCodable<T: Codable>(
-        _ item: T,
-        _ service: ServiceKeys,
-        _ account: String
-    ) async throws -> Void {
-        do {
-            // Encode as JSON data and save in keychain
-            let data = try JSONEncoder().encode(item)
-            try await update(data, service, account)
-
-        } catch {
-
-            logger.error("\(#file) \(#line) updateCodable: \(error.localizedDescription)")
-            throw error.localizedDescription
-        }
-    }
-
-
+    /// Deletes an item from the keychain by its service and account.
+    /// - Parameters:
+    ///   - service: The keychain service associated with the item to delete.
+    ///   - account: The account name associated with the item.
     @Sendable public func deleteByKey(
         _ service: ServiceKeys,
         _ account: String
     ) async throws -> Void {
-        do {
-            try await delete(service, account)
-        } catch {
-            logger.error("\(#file) \(#line) deleteByKey: \(error.localizedDescription)")
-            throw error.localizedDescription
-        }
+        try await delete(service, account)
     }
 
+    /// Clears all items from the keychain for the current application.
     @Sendable public func logout() async throws -> Void {
-        let secItemClasses =  [
-          kSecClassGenericPassword,
-          kSecClassInternetPassword,
-          kSecClassCertificate,
-          kSecClassKey,
-          kSecClassIdentity,
+        let secItemClasses = [
+            kSecClassGenericPassword,
+            kSecClassInternetPassword,
+            kSecClassCertificate,
+            kSecClassKey,
+            kSecClassIdentity
         ]
+        
         for itemClass in secItemClasses {
-          let spec: NSDictionary = [kSecClass: itemClass]
-          SecItemDelete(spec)
+            let spec: NSDictionary = [kSecClass: itemClass]
+            let status = SecItemDelete(spec)
+            if status != errSecSuccess && status != errSecItemNotFound {
+                let errorMessage = SecCopyErrorMessageString(status, nil) as String? ?? "Unknown error"
+                logger.error("Failed to clear keychain items: \(errorMessage)")
+                throw KeychainError.unexpectedStatus(status)
+            }
         }
-      }
-
+    }
 }
+
+// Ensure to define logger, DependencyKey, and other extensions as previously described.
+
 
 extension KeychainClient: DependencyKey {
 
     static public var liveValue: KeychainClient = .init(
-        save: { data, key, account in
+        save: { data, service, account in
             let query: [String: AnyObject] = [
-                // kSecAttrService,  kSecAttrAccount, and kSecClass
-                // uniquely identify the item to save in Keychain
-                kSecAttrService as String: key.rawValue as AnyObject,
+                kSecAttrService as String: service.rawValue as AnyObject,
                 kSecAttrAccount as String: account as AnyObject,
                 kSecClass as String: kSecClassGenericPassword,
-
-                // kSecValueData is the item value to save
                 kSecValueData as String: data as AnyObject
             ]
 
-            // SecItemAdd attempts to add the item identified by
-            // the query to keychain
             let status = SecItemAdd(query as CFDictionary, nil)
-
-            // errSecDuplicateItem is a special case where the
-            // item identified by the query already exists. Throw
-            // duplicateItem so the client can determine whether
-            // or not to handle this as an error
             if status == errSecDuplicateItem {
-                throw KeychainError.init(status: status)
-            }
-
-            // Any status other than errSecSuccess indicates the
-            // save operation failed.
-            guard status == errSecSuccess else {
-                throw KeychainError.unexpectedStatus(status)
+                // If a duplicate item exists, update instead of throwing an error.
+                let updateQuery: [String: AnyObject] = [
+                    kSecAttrService as String: service.rawValue as AnyObject,
+                    kSecAttrAccount as String: account as AnyObject,
+                    kSecClass as String: kSecClassGenericPassword
+                ]
+                let attributesToUpdate: [String: AnyObject] = [
+                    kSecValueData as String: data as AnyObject
+                ]
+                let updateStatus = SecItemUpdate(updateQuery as CFDictionary, attributesToUpdate as CFDictionary)
+                guard updateStatus == errSecSuccess else {
+                    throw KeychainError.unexpectedStatus(updateStatus)
+                }
+            } else {
+                guard status == errSecSuccess else {
+                    throw KeychainError.unexpectedStatus(status)
+                }
             }
         },
 
@@ -318,7 +296,6 @@ extension KeychainClient: DependencyKey {
             }
         }
     )
-
 }
 
 extension KeychainClient {

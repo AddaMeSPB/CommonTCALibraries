@@ -7,14 +7,18 @@ extension Color {
 }
 
 extension Color {
-  public static func hex(_ hex: UInt) -> Self {
-    Self(
-      red: Double((hex & 0xff0000) >> 16) / 255,
-      green: Double((hex & 0x00ff00) >> 8) / 255,
-      blue: Double(hex & 0x0000ff) / 255,
-      opacity: 1
-    )
-  }
+    /// Creates a color from a hexadecimal value.
+    /// - Parameter hex: The hexadecimal color value.
+    /// - Returns: A `Color` instance representing the color.
+    /// Color.hex(0xd4deb1)
+    public static func hex(_ hex: UInt) -> Self {
+        Self(
+          red: Double((hex & 0xff0000) >> 16) / 255,
+          green: Double((hex & 0x00ff00) >> 8) / 255,
+          blue: Double(hex & 0x0000ff) / 255,
+          opacity: 1
+        )
+    }
 }
 
 extension Color {

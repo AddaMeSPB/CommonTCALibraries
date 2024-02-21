@@ -44,6 +44,8 @@ public struct AnyShape: Shape {
     return _path(rect)
   }
 
-  private let _path: (CGRect) -> Path
+    // Mark the closure type as `@Sendable`
+    private let _path: @Sendable (CGRect) -> Path
+    
 }
 

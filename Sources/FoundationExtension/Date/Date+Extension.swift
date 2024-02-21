@@ -38,7 +38,6 @@ extension Date {
     return dateformat.string(from: self)
   }
 
-
     func toString(format: String = "yyyy-MM-dd") -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
@@ -87,6 +86,13 @@ extension Date {
 
     return dateFormatter.string(from: self)
   }
+
+    public var dateFormatterSimple: String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        return formatter.string(from: self)
+    }
+
 }
 
 extension Date {
