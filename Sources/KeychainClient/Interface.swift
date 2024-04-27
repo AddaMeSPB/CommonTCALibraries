@@ -56,7 +56,7 @@ public struct KeychainClient {
     var update: UpdateHandler
     var delete: DeleteHandler
 
-    /// Initializes a new KeychainClient with specified handlers for keychain operations.
+    /// Initialises a new KeychainClient with specified handlers for keychain operations.
     public init(
         save: @escaping SaveHandler,
         read: @escaping ReadHandler,
@@ -74,7 +74,7 @@ public struct KeychainClient {
     ///   - item: The Codable item to save.
     ///   - service: The keychain service under which to save the item.
     ///   - account: The account name associated with the item.
-    @Sendable public func saveOrUpdateCodable<T: Codable>(
+    public func saveOrUpdateCodable<T: Codable>(
         _ item: T,
         _ service: ServiceKeys,
         _ account: String
@@ -96,7 +96,7 @@ public struct KeychainClient {
     ///   - account: The account name associated with the item.
     ///   - type: The type of the Codable item to read.
     /// - Returns: The decoded item.
-    @Sendable public func readCodable<T: Codable>(
+    public func readCodable<T: Codable>(
         _ service: ServiceKeys,
         _ account: String,
         _ type: T.Type
@@ -109,7 +109,7 @@ public struct KeychainClient {
     /// - Parameters:
     ///   - service: The keychain service associated with the item to delete.
     ///   - account: The account name associated with the item.
-    @Sendable public func deleteByKey(
+    public func deleteByKey(
         _ service: ServiceKeys,
         _ account: String
     ) async throws -> Void {
@@ -117,7 +117,7 @@ public struct KeychainClient {
     }
 
     /// Clears all items from the keychain for the current application.
-    @Sendable public func logout() async throws -> Void {
+    public func logout() async throws -> Void {
         let secItemClasses = [
             kSecClassGenericPassword,
             kSecClassInternetPassword,
