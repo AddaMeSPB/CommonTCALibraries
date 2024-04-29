@@ -45,19 +45,31 @@ extension Build: TestDependencyKey {
 }
 
 extension Build: DependencyKey {
-    public static let liveValue = Self(
-        gitSha: { Bundle.main.infoDictionary?["GitSHA"] as? String ?? "" },
-        number: {
-            .init(
-                rawValue: (Bundle.main.infoDictionary?["CFBundleVersion"] as? String)
-                    .flatMap(Int.init)
-                ?? 0
-            )
-        },
-        identifier: { Bundle.main.bundleIdentifier ?? "" },
-        identifierForVendor: { UIDevice.current.identifierForVendor!.uuidString }
-    )
+    public static var liveValue: Self {
+        var identifier: String?
+        var identifierForVendor: String?
+
+        // Dispatch a background task to preload values
+        DispatchQueue.global(qos: .userInitiated).sync {
+            identifier = Bundle.main.bundleIdentifier
+            identifierForVendor = UIDevice.current.identifierForVendor?.uuidString
+        }
+
+        return Self(
+            gitSha: { Bundle.main.infoDictionary?["GitSHA"] as? String ?? "" },
+            number: {
+                .init(
+                    rawValue: (Bundle.main.infoDictionary?["CFBundleVersion"] as? String)
+                        .flatMap(Int.init)
+                    ?? 0
+                )
+            },
+            identifier: { identifier ?? "" },
+            identifierForVendor: { identifierForVendor ?? "" }
+        )
+    }
 }
+
 
 extension Build {
     public static let noop = Self(
