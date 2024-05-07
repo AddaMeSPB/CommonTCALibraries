@@ -18,6 +18,7 @@ let package = Package(
         .library(name: "SwiftUIHelpers", targets: ["SwiftUIHelpers"]),
         .library(name: "SwiftUIExtension", targets: ["SwiftUIExtension"]),
         .library(name: "NotificationHelpers", targets: ["NotificationHelpers"]),
+        .library(name: "iPhoneNumberKit", targets: ["iPhoneNumberKit"]),
 
         // MARK: - Logger
         .library(name: "LoggerKit", targets: ["LoggerKit"]),
@@ -38,7 +39,8 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.4.0"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.0.0"),
         .package(url: "https://github.com/pointfreeco/swift-tagged", from: "0.6.0"),
-        .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.0.0")
+        .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.0.0"),
+        .package(url: "https://github.com/marmelroy/PhoneNumberKit", from: "3.7.0"),
     ],
 
     targets: [
@@ -50,7 +52,8 @@ let package = Package(
                 "ComposableUserNotifications", "ComposableStoreKit", "UIApplicationClient",
                 "SwiftUIHelpers", "KeychainClient", "IDFAClient",
                 "SwiftUIExtension", "PathMonitorClient", "NotificationHelpers",
-                "RemoteNotificationsClient", "CoreLocationClient", "LoggerKit"
+                "RemoteNotificationsClient", "CoreLocationClient", "LoggerKit",
+                "iPhoneNumberKit"
             ]
         ),
 
@@ -149,7 +152,12 @@ let package = Package(
         .target(name: "FoundationExtension"),
         .target(name: "SwiftUIHelpers", dependencies: ["SwiftUIExtension"]),
         .target(name: "SwiftUIExtension"),
-        .target(name: "LoggerKit")
-
+        .target(name: "LoggerKit"),
+        .target(
+            name: "iPhoneNumberKit",
+            dependencies: [
+                .product(name: "PhoneNumberKit", package: "PhoneNumberKit")
+            ]
+        )
     ]
 )
