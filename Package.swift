@@ -1,4 +1,4 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.0
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
@@ -38,8 +38,8 @@ let package = Package(
     dependencies: [
         .package(url: "https://github.com/pointfreeco/swift-tagged", from: "0.10.0"),
         .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.1.5"),
-        .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.0.2"),
-        .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.9.3"),
+        .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.4.3"),
+        .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.17.0"),
         .package(url: "https://github.com/klundberg/composable-core-location.git", branch: "combine-only"),
     ],
 

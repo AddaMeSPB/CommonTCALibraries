@@ -1,7 +1,7 @@
 
 import SwiftUI
 import ComposableArchitecture
-import PhotosUI
+@preconcurrency import PhotosUI
 import Combine
 
 #if canImport(UIKit)
