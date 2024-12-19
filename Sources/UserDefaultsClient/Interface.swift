@@ -1,12 +1,8 @@
-//
-//  Interface.swift
-//  
-//
-//  Created by Saroar Khandoker on 06.12.2021.
-//
 
-import Dependencies
+
 import Foundation
+import Dependencies
+import DependenciesMacros
 
 extension DependencyValues {
   public var userDefaults: UserDefaultsClient {
@@ -15,6 +11,7 @@ extension DependencyValues {
   }
 }
 
+@DependencyClient
 public struct UserDefaultsClient {
   public var boolForKey: @Sendable (String) -> Bool
   public var dataForKey: @Sendable (String) -> Data?

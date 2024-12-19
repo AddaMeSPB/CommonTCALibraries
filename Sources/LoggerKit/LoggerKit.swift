@@ -8,8 +8,8 @@ import os
 ///  - [Unified Logging](https://developer.apple.com/documentation/os/logging)
 ///  - [OSLog](https://developer.apple.com/documentation/os/oslog)
 ///  - [Logger](https://developer.apple.com/documentation/os/logger)
-public struct LoggerKit {
-    public enum Category: String, Codable, Equatable {
+public struct LoggerKit : Sendable{
+    public enum Category: String, Codable, Equatable, Sendable {
         case `default`
         // All logs related to tracking and analytics.
         case statistics

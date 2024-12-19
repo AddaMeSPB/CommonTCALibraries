@@ -1,39 +1,32 @@
 import Combine
-import UserNotifications
+import Dependencies
+@preconcurrency import UserNotifications
+import DependenciesMacros
+import ComposableArchitecture
 
-public struct UserNotificationClient {
+@DependencyClient
+public struct UserNotificationClient: Sendable {
   public var add: @Sendable (UNNotificationRequest) async throws -> Void
-  public var delegate: @Sendable () -> AsyncStream<DelegateEvent>
-  public var getNotificationSettings: @Sendable () async -> Notification.Settings
-  public var deliveredNotifications: @Sendable () async -> [Notification]
-  public var pendingNotifications: @Sendable () async -> [Notification]
+  public var delegate: @Sendable () -> AsyncStream<DelegateEvent> = { .finished }
+  public var getNotificationSettings: @Sendable () async -> Notification.Settings = {
+    Notification.Settings(authorizationStatus: .notDetermined)
+  }
+  public var deliveredNotifications: @Sendable () async -> [Notification] = { [] }
+  public var pendingNotifications: @Sendable () async -> [Notification] = { [] }
+
   public var removeDeliveredNotificationsWithIdentifiers: @Sendable ([String]) async -> Void
   public var removePendingNotificationRequestsWithIdentifiers: @Sendable ([String]) async -> Void
   public var removeAllPendingNotificationRequests: @Sendable () async -> Void
   public var requestAuthorization: @Sendable (UNAuthorizationOptions) async throws -> Bool
 
-  public enum DelegateEvent: Equatable {
-    case didReceiveResponse(Notification.Response, completionHandler: @Sendable () -> Void)
+  @CasePathable
+  public enum DelegateEvent {
+    case didReceiveResponse(Notification.Response)
     case openSettingsForNotification(Notification?)
-    case willPresentNotification(
-      Notification, completionHandler: @Sendable (UNNotificationPresentationOptions) -> Void
-    )
-
-    public static func == (lhs: Self, rhs: Self) -> Bool {
-      switch (lhs, rhs) {
-      case let (.didReceiveResponse(lhs, _), .didReceiveResponse(rhs, _)):
-        return lhs == rhs
-      case let (.openSettingsForNotification(lhs), .openSettingsForNotification(rhs)):
-        return lhs == rhs
-      case let (.willPresentNotification(lhs, _), .willPresentNotification(rhs, _)):
-        return lhs == rhs
-      default:
-        return false
-      }
-    }
+    case willPresentNotification(Notification)
   }
 
-  public struct Notification: Equatable {
+  public struct Notification: Equatable, Sendable {
     public var date: Date
     public var request: UNNotificationRequest
 
@@ -45,7 +38,7 @@ public struct UserNotificationClient {
       self.request = request
     }
 
-    public struct Response: Equatable {
+    public struct Response: Equatable, Sendable {
       public var notification: Notification
 
       public init(notification: Notification) {
@@ -63,4 +56,3 @@ public struct UserNotificationClient {
     }
   }
 }
-

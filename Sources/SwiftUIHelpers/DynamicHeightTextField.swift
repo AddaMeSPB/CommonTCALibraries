@@ -39,7 +39,7 @@ public struct DynamicHeightTextField: UIViewRepresentable {
   }
 }
 
-public class Coordinator: NSObject, UITextViewDelegate, NSLayoutManagerDelegate {
+public class Coordinator: NSObject, UITextViewDelegate, @preconcurrency NSLayoutManagerDelegate {
   var dynamicHeightTextField: DynamicHeightTextField
 
   weak var textView: UITextView?

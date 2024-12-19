@@ -1,16 +1,16 @@
-import CoreLocation
+@preconcurrency import CoreLocation
 import Dependencies
 import XCTestDynamicOverlay
 import CoreLocation
 
-public struct CoreLocationClient {
+public struct CoreLocationClient : Sendable {
     public var authorizationStatus: @Sendable () -> CLAuthorizationStatus
     public var delegate: @Sendable () -> AsyncStream<LocationManagerDelegate.Action>
     public var requestLocation: @Sendable () -> ()
     public var requestWhenInUseAuthorization: @Sendable () -> ()
 }
 
-public final class LocationManagerDelegate: NSObject, CLLocationManagerDelegate {
+public final class LocationManagerDelegate: NSObject, CLLocationManagerDelegate, Sendable {
     public let continuation: AsyncStream<Action>.Continuation
 
     public init(

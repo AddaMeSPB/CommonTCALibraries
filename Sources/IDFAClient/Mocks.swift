@@ -26,6 +26,6 @@ extension IDFAClient {
 
 extension IDFAClient: TestDependencyKey {
     public static var testValue: IDFAClient = .init(
-        requestAuthorization: XCTUnimplemented("\(Self.self).requestAuthorization is not implemented")
+        requestAuthorization: unimplemented("\(Self.self).requestAuthorization is not implemented")
     )
 }

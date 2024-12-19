@@ -16,6 +16,7 @@ let package = Package(
         .library(name: "SwiftUIHelpers", targets: ["SwiftUIHelpers"]),
         .library(name: "SwiftUIExtension", targets: ["SwiftUIExtension"]),
         .library(name: "CommonTCALibraries", targets: ["CommonTCALibraries"]),
+        .library(name: "UserDefaultsClient", targets: ["UserDefaultsClient"]),
         .library(name: "ComposableStoreKit", targets: ["ComposableStoreKit"]),
         .library(name: "NotificationHelpers", targets: ["NotificationHelpers"]),
         .library(name: "ComposableUserNotifications", targets: ["ComposableUserNotifications"]),
@@ -28,7 +29,6 @@ let package = Package(
         .library(name: "IDFAClient", targets: ["IDFAClient"]),
         .library(name: "KeychainClient", targets: ["KeychainClient"]),
         .library(name: "PathMonitorClient", targets: ["PathMonitorClient"]),
-        .library(name: "UserDefaultsClient", targets: ["UserDefaultsClient"]),
         .library(name: "CoreLocationClient", targets: ["CoreLocationClient"]),
         .library(name: "FoundationExtension", targets: ["FoundationExtension"]),
         .library(name: "UIApplicationClient", targets: ["UIApplicationClient"]),
@@ -41,6 +41,7 @@ let package = Package(
         .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.4.3"),
         .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.17.0"),
         .package(url: "https://github.com/klundberg/composable-core-location.git", branch: "combine-only"),
+        
     ],
 
     targets: [
@@ -48,7 +49,7 @@ let package = Package(
             name: "CommonTCALibraries",
             dependencies: [
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
-                "Build", "UserDefaultsClient", "InfoPlist", "FoundationExtension",
+                "Build", "InfoPlist", "FoundationExtension",
                 "ComposableUserNotifications", "ComposableStoreKit", "UIApplicationClient",
                 "SwiftUIHelpers", "KeychainClient", "IDFAClient",
                 "SwiftUIExtension", "PathMonitorClient", "NotificationHelpers",
@@ -62,7 +63,7 @@ let package = Package(
             dependencies: [
                 .product(name: "Tagged", package: "swift-tagged"),
                 .product(name: "Dependencies", package: "swift-dependencies"),
-                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies")
             ]
         ),
 
@@ -86,15 +87,20 @@ let package = Package(
             name: "UserDefaultsClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
-                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay")
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
+                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
+                .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
             ]
         ),
+
 
         .target(
             name: "ComposableUserNotifications",
             dependencies: [
-                .product(name: "Dependencies", package: "swift-dependencies"),
-                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
+              .product(name: "Dependencies", package: "swift-dependencies"),
+              .product(name: "DependenciesMacros", package: "swift-dependencies"),
+              .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
+              .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
             ]
         ),
 
@@ -111,7 +117,9 @@ let package = Package(
             name: "UIApplicationClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
+                .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
             ]
         ),
 

@@ -8,13 +8,13 @@ import UIKit
 extension RemoteNotificationsClient: DependencyKey {
     public static let liveValue = Self(
         isRegistered: {
-            await UIApplication.shared.isRegisteredForRemoteNotifications
+          await UIApplication.shared.isRegisteredForRemoteNotifications
         },
         register: {
-            await UIApplication.shared.registerForRemoteNotifications()
+          await UIApplication.shared.registerForRemoteNotifications()
         },
         unregister: {
-            await UIApplication.shared.unregisterForRemoteNotifications()
+          await UIApplication.shared.unregisterForRemoteNotifications()
         }
     )
 }

@@ -36,7 +36,7 @@ public enum EnvironmentKeys {
 
   // MARK: - Plist
 
-  private static let infoDictionary: [String: Any] = {
+  nonisolated(unsafe) private static let infoDictionary: [String: Any] = {
     guard let dict = Bundle.main.infoDictionary else {
       fatalError("Plist file not found")
     }  // this is getting all information from main ios app

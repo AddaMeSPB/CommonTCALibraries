@@ -311,10 +311,10 @@ extension KeychainClient: TestDependencyKey {
     public static let previewValue = Self.noop
 
     static public var testValue: KeychainClient = .init(
-        save: XCTUnimplemented("\(Self.self).save") ,
-        read: XCTUnimplemented("\(Self.self).read", placeholder: Data()),
-        update: XCTUnimplemented("\(Self.self).update"),
-        delete: XCTUnimplemented("\(Self.self).delete")
+        save: unimplemented("\(Self.self).save") ,
+        read: unimplemented("\(Self.self).read", placeholder: Data()),
+        update: unimplemented("\(Self.self).update"),
+        delete: unimplemented("\(Self.self).delete")
     )
 }
 

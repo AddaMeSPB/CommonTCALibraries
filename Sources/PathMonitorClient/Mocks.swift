@@ -38,6 +38,6 @@ extension PathMonitorClient {
 
 extension PathMonitorClient: TestDependencyKey {
     static public var testValue: PathMonitorClient = .init(
-        nPath: XCTUnimplemented("\(Self.self).nPath")
+        nPath: unimplemented("\(Self.self).nPath")
     )
 }
