@@ -8,5 +8,5 @@ public struct VerifyReceiptEnvelope: Codable, Equatable {
 }
 
 extension VerifyReceiptEnvelope {
-    static public let empty: VerifyReceiptEnvelope = .init(verifiedProductIds: [""])
+  @MainActor static public let empty: VerifyReceiptEnvelope = .init(verifiedProductIds: [""])
 }

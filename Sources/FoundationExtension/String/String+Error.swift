@@ -2,8 +2,8 @@
 import Foundation
 
 /// Easily throw generic errors with a text description.
-extension String: Error {}
+extension String: @retroactive Error {}
 
-extension String: LocalizedError {
+extension String: @retroactive LocalizedError {
     public var errorDescription: String? { return self }
 }

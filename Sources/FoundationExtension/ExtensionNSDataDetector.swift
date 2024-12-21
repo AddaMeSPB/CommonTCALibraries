@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Utility
 
 extension NSDataDetector {
-    public struct CheckingType: OptionSet {
+  public struct CheckingType: OptionSet, Sendable {
         public let rawValue: UInt64
 
         public init(rawValue: UInt64) {

@@ -25,7 +25,5 @@ extension IDFAClient {
 }
 
 extension IDFAClient: TestDependencyKey {
-    public static var testValue: IDFAClient = .init(
-        requestAuthorization: unimplemented("\(Self.self).requestAuthorization is not implemented")
-    )
+    public static let testValue: IDFAClient = .init()
 }

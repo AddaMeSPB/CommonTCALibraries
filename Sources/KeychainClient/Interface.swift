@@ -1,5 +1,6 @@
 import Foundation
 import Dependencies
+import DependenciesMacros
 import XCTestDynamicOverlay
 import FoundationExtension
 import os
@@ -8,7 +9,8 @@ public enum ServiceKeys: NSString {
     case token, deviceToken, voipToken, user, mobileNumbers, serverContacts, deviceinfo, cllocation2d
 }
 
-public struct KeychainClient {
+@DependencyClient
+public struct KeychainClient: Sendable {
     enum KeychainError: Error {
         case itemNotFound
         case duplicateItem
@@ -143,7 +145,7 @@ public struct KeychainClient {
 
 extension KeychainClient: DependencyKey {
 
-    static public var liveValue: KeychainClient = .init(
+    static public let liveValue: KeychainClient = .init(
         save: { data, service, account in
             let query: [String: AnyObject] = [
                 kSecAttrService as String: service.rawValue as AnyObject,
@@ -310,7 +312,7 @@ extension KeychainClient {
 extension KeychainClient: TestDependencyKey {
     public static let previewValue = Self.noop
 
-    static public var testValue: KeychainClient = .init(
+    static public let testValue: KeychainClient = .init(
         save: unimplemented("\(Self.self).save") ,
         read: unimplemented("\(Self.self).read", placeholder: Data()),
         update: unimplemented("\(Self.self).update"),

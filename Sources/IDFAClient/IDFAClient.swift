@@ -1,6 +1,9 @@
 import AdSupport
 import AppTrackingTransparency
+import Dependencies
+import DependenciesMacros
 
-public struct IDFAClient {
-    public var requestAuthorization:  @Sendable () async -> ATTrackingManager.AuthorizationStatus
+@DependencyClient
+public struct IDFAClient: Sendable {
+  public var requestAuthorization:  @Sendable () async -> ATTrackingManager.AuthorizationStatus = { .notDetermined }
 }

@@ -1,8 +1,9 @@
+import ComposableArchitecture
 import StoreKit
-import Dependencies
 
 @available(iOSApplicationExtension, unavailable)
-extension StoreKitClient: DependencyKey {
+extension StoreKitClient: @preconcurrency DependencyKey {
+  @MainActor
   public static let liveValue = Self(
     addPayment: { SKPaymentQueue.default().add($0) },
     appStoreReceiptURL: { Bundle.main.appStoreReceiptURL },
@@ -13,9 +14,9 @@ extension StoreKitClient: DependencyKey {
         let delegate = ProductRequest(continuation: continuation)
         request.delegate = delegate
         request.start()
-        continuation.onTermination = { [request = UncheckedSendable(request)] _ in
+        continuation.onTermination = { [request = UncheckedSendable(request), delegate = UncheckedSendable(delegate)] _ in
           request.value.cancel()
-          _ = delegate
+          _ = delegate.value
         }
       }
       guard let response = try await stream.first(where: { _ in true })
@@ -33,18 +34,18 @@ extension StoreKitClient: DependencyKey {
       AsyncStream { continuation in
         let observer = Observer(continuation: continuation)
         SKPaymentQueue.default().add(observer)
-        continuation.onTermination = { _ in
-            SKPaymentQueue.default().remove(observer)
+        continuation.onTermination = { [observer = UncheckedSendable(observer)] _ in
+          SKPaymentQueue.default().remove(observer.value)
         }
       }
     },
     requestReview: {
       guard
-        let scene = await UIApplication.shared.connectedScenes
+        let scene = UIApplication.shared.connectedScenes
           .first(where: { $0 is UIWindowScene })
           as? UIWindowScene
       else { return }
-      await SKStoreReviewController.requestReview(in: scene)
+      SKStoreReviewController.requestReview(in: scene)
     },
     restoreCompletedTransactions: { SKPaymentQueue.default().restoreCompletedTransactions() }
   )
@@ -110,8 +111,6 @@ private class Observer: NSObject, SKPaymentTransactionObserver {
   func paymentQueue(
     _ queue: SKPaymentQueue, restoreCompletedTransactionsFailedWithError error: Error
   ) {
-    // TODO: Should this use TaskResult<Never> instead? TaskFailure?
-    self.continuation.yield(.restoreCompletedTransactionsFailed(error as NSError))
+    self.continuation.yield(.restoreCompletedTransactionsFailed(error))
   }
 }
-

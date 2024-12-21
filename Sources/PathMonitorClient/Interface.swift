@@ -1,8 +1,9 @@
 import Contacts
 import Network
 import Dependencies
+import DependenciesMacros
 
-public struct NetworkPath {
+public struct NetworkPath: Sendable {
   public var status: NWPath.Status
 
   public init(status: NWPath.Status) {
@@ -16,7 +17,8 @@ extension NetworkPath {
   }
 }
 
-public struct PathMonitorClient {
+@DependencyClient
+public struct PathMonitorClient: Sendable {
   public typealias NPath = @Sendable () -> AsyncStream<NetworkPath>
   public var nPath: NPath
 

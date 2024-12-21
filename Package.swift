@@ -6,7 +6,7 @@ import PackageDescription
 let package = Package(
     name: "CommonTCALibraries",
     platforms: [
-        .iOS(.v14),
+        .iOS(.v15),
         .macOS(.v12)
     ],
 
@@ -16,7 +16,6 @@ let package = Package(
         .library(name: "SwiftUIHelpers", targets: ["SwiftUIHelpers"]),
         .library(name: "SwiftUIExtension", targets: ["SwiftUIExtension"]),
         .library(name: "CommonTCALibraries", targets: ["CommonTCALibraries"]),
-        .library(name: "UserDefaultsClient", targets: ["UserDefaultsClient"]),
         .library(name: "ComposableStoreKit", targets: ["ComposableStoreKit"]),
         .library(name: "NotificationHelpers", targets: ["NotificationHelpers"]),
         .library(name: "ComposableUserNotifications", targets: ["ComposableUserNotifications"]),
@@ -36,11 +35,12 @@ let package = Package(
     ],
 
     dependencies: [
-        .package(url: "https://github.com/pointfreeco/swift-tagged", from: "0.10.0"),
-        .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.1.5"),
-        .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.4.3"),
-        .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.17.0"),
-        .package(url: "https://github.com/klundberg/composable-core-location.git", branch: "combine-only"),
+      .package(url: "https://github.com/pointfreeco/swift-tagged", from: "0.10.0"),
+      .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "1.1.0"),
+      .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.1.5"),
+      .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.4.3"),
+      .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.17.0"),
+      .package(url: "https://github.com/klundberg/composable-core-location.git", branch: "combine-only"),
         
     ],
 
@@ -71,6 +71,7 @@ let package = Package(
             name: "IDFAClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
                 "FoundationExtension"
             ]
@@ -82,17 +83,6 @@ let package = Package(
             .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
           ]
         ),
-
-        .target(
-            name: "UserDefaultsClient",
-            dependencies: [
-                .product(name: "Dependencies", package: "swift-dependencies"),
-                .product(name: "DependenciesMacros", package: "swift-dependencies"),
-                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
-                .product(name: "ComposableArchitecture", package: "swift-composable-architecture")
-            ]
-        ),
-
 
         .target(
             name: "ComposableUserNotifications",
@@ -107,9 +97,11 @@ let package = Package(
         .target(
             name: "ComposableStoreKit",
             dependencies: [
-                .product(name: "Dependencies", package: "swift-dependencies"),
-                .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
-                "UserDefaultsClient", "InfoPlist"
+              .product(name: "CasePaths", package: "swift-case-paths"),
+              .product(name: "Dependencies", package: "swift-dependencies"),
+              .product(name: "DependenciesMacros", package: "swift-dependencies"),
+              .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+              "InfoPlist"
             ]
         ),
 
@@ -127,6 +119,7 @@ let package = Package(
             name: "KeychainClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
                 "FoundationExtension"
             ]
         ),
@@ -135,6 +128,7 @@ let package = Package(
             name: "PathMonitorClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
                 "FoundationExtension"
             ]
@@ -144,6 +138,7 @@ let package = Package(
             name: "RemoteNotificationsClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay")
             ]
         ),
@@ -159,6 +154,7 @@ let package = Package(
             name: "CoreLocationClient",
             dependencies: [
                 .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
             ]
         ),

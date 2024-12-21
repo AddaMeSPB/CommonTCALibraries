@@ -3,7 +3,7 @@ import Dependencies
 import Foundation
 
 extension PathMonitorClient: DependencyKey {
-    static public var liveValue: Self = .init {
+    static public let liveValue: Self = .init {
         AsyncStream { continuation in
             let monitor = NWPathMonitor()
             monitor.pathUpdateHandler = { path in

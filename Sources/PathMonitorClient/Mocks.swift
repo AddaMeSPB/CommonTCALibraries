@@ -37,7 +37,7 @@ extension PathMonitorClient {
 }
 
 extension PathMonitorClient: TestDependencyKey {
-    static public var testValue: PathMonitorClient = .init(
-        nPath: unimplemented("\(Self.self).nPath")
-    )
+  static public let testValue = Self(
+      nPath: { .init { continuation in continuation.yield(NetworkPath(status: .unsatisfied)) } }
+  )
 }
