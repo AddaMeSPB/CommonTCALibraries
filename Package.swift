@@ -50,12 +50,11 @@ let package = Package(
             name: "CommonTCALibraries",
             dependencies: [
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
-                "Build", "InfoPlist", "FoundationExtension",
+                "Build", "InfoPlist", "FoundationExtension", "UIDeviceClient",
                 "ComposableUserNotifications", "ComposableStoreKit", "UIApplicationClient",
-                "SwiftUIHelpers", "KeychainClient", "IDFAClient",
+                "SwiftUIHelpers", "KeychainClient", "IDFAClient", "ImagePicker",
                 "SwiftUIExtension", "PathMonitorClient", "NotificationHelpers",
                 "RemoteNotificationsClient", "CoreLocationClient", "LoggerKit",
-                "ImagePicker"
             ]
         ),
 
