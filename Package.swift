@@ -26,6 +26,7 @@ let package = Package(
         // MARK: - Clients
         .library(name: "InfoPlist", targets: ["InfoPlist"]),
         .library(name: "IDFAClient", targets: ["IDFAClient"]),
+        .library(name: "UIDeviceClient", targets: ["UIDeviceClient"]),
         .library(name: "KeychainClient", targets: ["KeychainClient"]),
         .library(name: "PathMonitorClient", targets: ["PathMonitorClient"]),
         .library(name: "CoreLocationClient", targets: ["CoreLocationClient"]),
@@ -158,7 +159,15 @@ let package = Package(
                 .product(name: "XCTestDynamicOverlay", package: "xctest-dynamic-overlay"),
             ]
         ),
-        
+
+        .target(
+            name: "UIDeviceClient",
+            dependencies: [
+                .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies")
+            ]
+        ),
+
         .target(name: "InfoPlist", resources: [.process("Resources/")]),
         .target(
             name: "FoundationExtension",

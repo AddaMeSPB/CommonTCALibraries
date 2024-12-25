@@ -1,6 +1,9 @@
 
+import DependenciesMacros
+
+@DependencyClient
 public struct RemoteNotificationsClient: Sendable {
-  public var isRegistered: @Sendable () async -> Bool
+  public var isRegistered: @Sendable () async -> Bool = { false }
   public var register: @Sendable () async -> Void
   public var unregister: @Sendable () async -> Void
 }

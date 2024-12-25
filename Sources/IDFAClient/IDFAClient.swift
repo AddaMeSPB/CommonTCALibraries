@@ -5,5 +5,5 @@ import DependenciesMacros
 
 @DependencyClient
 public struct IDFAClient: Sendable {
-  public var requestAuthorization:  @Sendable () async -> ATTrackingManager.AuthorizationStatus = { .notDetermined }
+  public var requestAuthorization: @Sendable () async -> ATTrackingManager.AuthorizationStatus = { .notDetermined }
 }
