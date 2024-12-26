@@ -71,13 +71,13 @@ extension UserNotificationClient.Notification.Settings {
 
 extension UserNotificationClient {
   fileprivate class Delegate: NSObject, UNUserNotificationCenterDelegate {
-    var continuation: AsyncStream<UserNotificationClient.DelegateEvent>.Continuation
+    var continuation: AsyncStream<DelegateEvent>.Continuation
 
-    init(continuation: AsyncStream<UserNotificationClient.DelegateEvent>.Continuation) {
+    init(continuation: AsyncStream<DelegateEvent>.Continuation) {
       self.continuation = continuation
     }
 
-    //    // Update didReceive with async
+    // Update didReceive with async
     func userNotificationCenter(
       _ center: UNUserNotificationCenter,
       didReceive response: UNNotificationResponse
@@ -97,13 +97,13 @@ extension UserNotificationClient {
 
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        willPresent notification: UNNotification
-    ) async -> UNNotificationPresentationOptions {
-        // Yield the willPresentNotification event with the notification safely
-        self.continuation.yield(.willPresentNotification(.init(rawValue: notification)))
-        // Now you can decide what the presentation options should be
-        // For example, you could return specific options
-        return [.banner, .sound] // Example options
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler:
+        @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        self.continuation.yield(
+            .willPresentNotification(.init(rawValue: notification)) { completionHandler($0) }
+        )
     }
   }
 }

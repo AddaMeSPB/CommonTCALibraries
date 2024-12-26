@@ -20,10 +20,10 @@ public struct UserNotificationClient: Sendable {
   public var requestAuthorization: @Sendable (UNAuthorizationOptions) async throws -> Bool
 
   @CasePathable
-  public enum DelegateEvent {
+  public enum DelegateEvent: @unchecked Sendable {
     case didReceiveResponse(Notification.Response)
     case openSettingsForNotification(Notification?)
-    case willPresentNotification(Notification)
+    case willPresentNotification(Notification, completionHandler: (UNNotificationPresentationOptions) -> Void)
   }
 
   public struct Notification: Equatable, Sendable {
