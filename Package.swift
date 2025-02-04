@@ -23,6 +23,9 @@ let package = Package(
         // MARK: - Logger
         .library(name: "LoggerKit", targets: ["LoggerKit"]),
 
+        // MARK: Helpers
+        .library(name: "CombineHelpers", targets: ["CombineHelpers"]),
+
         // MARK: - Clients
         .library(name: "InfoPlist", targets: ["InfoPlist"]),
         .library(name: "IDFAClient", targets: ["IDFAClient"]),
@@ -176,7 +179,8 @@ let package = Package(
         ),
         .target(name: "SwiftUIHelpers", dependencies: ["SwiftUIExtension"]),
         .target(name: "SwiftUIExtension"),
-        .target(name: "LoggerKit")
+        .target(name: "LoggerKit"),
+        .target(name: "CombineHelpers"),
 
     ]
 )

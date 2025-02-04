@@ -5,6 +5,7 @@ import Foundation
 import Dependencies
 import DependenciesMacros
 
+@DependencyClient
 public struct Build: Sendable {
   public var gitSha: @Sendable () -> String = { "" }
   public var number: @Sendable () -> Number = { 0 }
