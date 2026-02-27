@@ -6,8 +6,8 @@ import PackageDescription
 let package = Package(
     name: "CommonTCALibraries",
     platforms: [
-        .iOS(.v15),
-        .macOS(.v12)
+        .iOS(.v17),
+        .macOS(.v14)
     ],
 
     products: [
@@ -182,5 +182,6 @@ let package = Package(
         .target(name: "LoggerKit"),
         .target(name: "CombineHelpers"),
 
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )

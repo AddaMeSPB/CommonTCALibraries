@@ -9,11 +9,15 @@ import Dependencies
 extension UIApplicationClient: @preconcurrency DependencyKey {
   @MainActor
   public static let liveValue = Self(
-    alternateIconNameAsync: { UIApplication.shared.alternateIconName },
-    open: { @MainActor in await UIApplication.shared.open($0, options: $1) },
+    alternateIconNameAsync: { @MainActor in UIApplication.shared.alternateIconName },
+    open: { @MainActor url, options in
+      await UIApplication.shared.open(url, options: options)
+    },
     openSettingsURLString: { UIApplication.openSettingsURLString },
-    setAlternateIconName: { @MainActor in try await UIApplication.shared.setAlternateIconName($0) },
-    setUserInterfaceStyle: { userInterfaceStyle in
+    setAlternateIconName: { @MainActor name in
+      try await UIApplication.shared.setAlternateIconName(name)
+    },
+    setUserInterfaceStyle: { @MainActor userInterfaceStyle in
       await MainActor.run {
         guard
           let scene = UIApplication.shared.connectedScenes.first(where: { $0 is UIWindowScene })
@@ -22,6 +26,7 @@ extension UIApplicationClient: @preconcurrency DependencyKey {
         scene.keyWindow?.overrideUserInterfaceStyle = userInterfaceStyle
       }
     },
-    supportsAlternateIconsAsync: { UIApplication.shared.supportsAlternateIcons }
+    supportsAlternateIconsAsync: { @MainActor in UIApplication.shared.supportsAlternateIcons }
   )
 }
+

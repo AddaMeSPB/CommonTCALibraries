@@ -1,5 +1,6 @@
 import ComposableArchitecture
 import StoreKit
+import UIKit
 
 @available(iOSApplicationExtension, unavailable)
 extension StoreKitClient: @preconcurrency DependencyKey {
@@ -40,12 +41,14 @@ extension StoreKitClient: @preconcurrency DependencyKey {
       }
     },
     requestReview: {
-      guard
-        let scene = UIApplication.shared.connectedScenes
-          .first(where: { $0 is UIWindowScene })
-          as? UIWindowScene
-      else { return }
-      SKStoreReviewController.requestReview(in: scene)
+      await MainActor.run {
+        guard
+          let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0 is UIWindowScene })
+            as? UIWindowScene
+        else { return }
+        SKStoreReviewController.requestReview(in: scene)
+      }
     },
     restoreCompletedTransactions: { SKPaymentQueue.default().restoreCompletedTransactions() }
   )
