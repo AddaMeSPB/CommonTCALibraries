@@ -264,36 +264,21 @@ extension KeychainClient: DependencyKey {
         },
 
         delete: { key, account in
-
+            // SecItemDelete only accepts class and attribute keys.
+            // Do NOT include kSecMatchLimit or kSecReturnData — those are
+            // read-only query attributes and cause SecItemDelete to return
+            // errSecParam (-50) on real devices, silently breaking logout.
             let query: [String: AnyObject] = [
-                // kSecAttrService,  kSecAttrAccount, and kSecClass
-                // uniquely identify the item to read in Keychain
                 kSecAttrService as String: key.rawValue as AnyObject,
                 kSecAttrAccount as String: account as AnyObject,
                 kSecClass as String: kSecClassGenericPassword,
-
-                // kSecMatchLimitOne indicates keychain should read
-                // only the most recent item matching this query
-                kSecMatchLimit as String: kSecMatchLimitOne,
-
-                // kSecReturnData is set to kCFBooleanTrue in order
-                // to retrieve the data for the item
-                kSecReturnData as String: kCFBooleanTrue
             ]
 
             let status = SecItemDelete(query as CFDictionary)
 
-
-            // errSecItemNotFound is a special status indicating the
-            // read item does not exist. Throw itemNotFound so the
-            // client can determine whether or not to handle
-            // this case
-            guard status != errSecItemNotFound else {
-                throw KeychainError.init(status: status)
-            }
-
-
-            if status != errSecItemNotFound && status != errSecSuccess {
+            // errSecItemNotFound is treated as success — idempotent delete.
+            // Any other non-success status is a real error.
+            guard status == errSecSuccess || status == errSecItemNotFound else {
                 throw KeychainError.unexpectedStatus(status)
             }
         }
