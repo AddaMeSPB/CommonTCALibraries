@@ -36,6 +36,7 @@ let package = Package(
         .library(name: "FoundationExtension", targets: ["FoundationExtension"]),
         .library(name: "UIApplicationClient", targets: ["UIApplicationClient"]),
         .library(name: "RemoteNotificationsClient", targets: ["RemoteNotificationsClient"]),
+        .library(name: "AppPromo", targets: ["AppPromo"]),
     ],
 
     dependencies: [
@@ -44,8 +45,6 @@ let package = Package(
       .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.1.5"),
       .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.4.3"),
       .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.17.0"),
-      .package(url: "https://github.com/klundberg/composable-core-location.git", branch: "combine-only"),
-        
     ],
 
     targets: [
@@ -181,6 +180,8 @@ let package = Package(
         .target(name: "SwiftUIExtension"),
         .target(name: "LoggerKit"),
         .target(name: "CombineHelpers"),
+
+        .target(name: "AppPromo"),
 
     ],
     swiftLanguageModes: [.v5]
