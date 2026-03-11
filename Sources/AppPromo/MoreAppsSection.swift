@@ -37,10 +37,11 @@ public struct MoreAppsSection: View {
 
     @ViewBuilder
     private func appRow(_ app: AppInfo) -> some View {
-        if let url = URL(string: app.appStoreURL) {
-            Link(destination: url) {
+        if let appStoreURL = URL(string: app.appStoreURL),
+           let iconURL = URL(string: app.iconURL) {
+            Link(destination: appStoreURL) {
                 HStack(spacing: 12) {
-                    AsyncImage(url: URL(string: app.iconURL)) { phase in
+                    AsyncImage(url: iconURL) { phase in
                         switch phase {
                         case .success(let image):
                             image

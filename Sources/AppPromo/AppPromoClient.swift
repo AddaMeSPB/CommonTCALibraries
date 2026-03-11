@@ -3,7 +3,7 @@ import Foundation
 // MARK: - Cache
 
 private actor AppPromoCache {
-    static let shared = AppPromoCache()
+    nonisolated(unsafe) static let shared = AppPromoCache()
 
     private var cachedApps: [AppInfo]?
     private var cacheDate: Date?
@@ -30,18 +30,19 @@ public enum AppPromoClient {
     /// - Falls back to bundled data on network failure.
     public static func fetchApps(excluding bundleID: String) async -> [AppInfo] {
         let cache = AppPromoCache.shared
+        let exclude: ([AppInfo]) -> [AppInfo] = { $0.filter { $0.bundleID != bundleID } }
 
         if let cached = await cache.get() {
-            return cached.filter { $0.bundleID != bundleID }
+            return exclude(cached)
         }
 
         do {
             let (data, _) = try await URLSession.shared.data(from: appsURL)
             let response = try JSONDecoder().decode(AppsResponse.self, from: data)
             await cache.set(response.apps)
-            return response.apps.filter { $0.bundleID != bundleID }
+            return exclude(response.apps)
         } catch {
-            return AppInfo.allByAlif.filter { $0.bundleID != bundleID }
+            return exclude(AppInfo.allByAlif)
         }
     }
 }
