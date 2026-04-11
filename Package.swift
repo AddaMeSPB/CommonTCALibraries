@@ -37,6 +37,10 @@ let package = Package(
         .library(name: "UIApplicationClient", targets: ["UIApplicationClient"]),
         .library(name: "RemoteNotificationsClient", targets: ["RemoteNotificationsClient"]),
         .library(name: "AppPromo", targets: ["AppPromo"]),
+
+        // MARK: - Offer Redeem
+        .library(name: "OfferRedeemClient", targets: ["OfferRedeemClient"]),
+        .library(name: "OfferRedeemFeature", targets: ["OfferRedeemFeature"]),
     ],
 
     dependencies: [
@@ -44,7 +48,7 @@ let package = Package(
       .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "1.1.0"),
       .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.1.5"),
       .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.4.3"),
-      .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.17.0"),
+      .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.25.0"),
     ],
 
     targets: [
@@ -182,6 +186,30 @@ let package = Package(
         .target(name: "CombineHelpers"),
 
         .target(name: "AppPromo"),
+
+        // MARK: - Offer Redeem
+        .target(
+            name: "OfferRedeemClient",
+            dependencies: [
+                .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
+            ]
+        ),
+        .target(
+            name: "OfferRedeemFeature",
+            dependencies: [
+                .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+                "OfferRedeemClient",
+            ]
+        ),
+        .testTarget(
+            name: "OfferRedeemFeatureTests",
+            dependencies: [
+                "OfferRedeemFeature",
+                "OfferRedeemClient",
+                .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+            ]
+        ),
 
     ],
     swiftLanguageModes: [.v5]
