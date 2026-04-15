@@ -89,6 +89,10 @@ public enum ImageType: String {
  */
 public enum PassImagesType: String {
     case icon, logo, strip, thumbnail
+    /// High-resolution variant (≈800×800) intended for web display & sharing.
+    /// Not part of the Apple Wallet pkpass spec — uploaded alongside the
+    /// wallet-spec variants so the web modal/hero can show a sharp image.
+    case avatar
 }
 
 extension UIImage {
@@ -129,7 +133,13 @@ extension UIImage {
         passImagesType: PassImagesType
     ) throws -> (Data, String) {
 
-        let heicData = try heic(compressionQuality: compressionQuality)
+        // Resize to the target dimensions for this pass image type BEFORE
+        // encoding. Previously the HEIC branch skipped this and uploaded the
+        // full-size original, producing bloated uploads for wallet-spec
+        // variants (icon/logo/thumbnail) and missing the chance to cap the
+        // new `.avatar` variant at 800×800.
+        let sourceImage = resizeImage(passImagesType: passImagesType) ?? self
+        let heicData = try sourceImage.heic(compressionQuality: compressionQuality)
 
         if isHeicSupported {
             if imageType == .png {
@@ -143,9 +153,13 @@ extension UIImage {
             }
 
             return (heicData, "heic")
-            
+
         } else {
-            guard let jpegData = jpegData(compressionQuality: compressionQuality.rawValue) else {
+            // Resize first so JPEG path also respects the target dimensions
+            // (matches the HEIC branch and the previous PNG sub-branch).
+            guard let jpegData = sourceImage.jpegData(
+                compressionQuality: compressionQuality.rawValue
+            ) else {
                 throw ImageCompressionError.compressionFailed
             }
 
@@ -154,14 +168,11 @@ extension UIImage {
                 return (jpegData, imageType.rawValue)
 
             case .png:
-                guard
-                    let image = UIImage(data: jpegData),
-                    let resizeImage = image.resizeImage(passImagesType: passImagesType)
-                else {
+                guard let image = UIImage(data: jpegData) else {
                     throw ImageCompressionError.invalidImageData
                 }
 
-                if let pngData = resizeImage.pngData() {
+                if let pngData = image.pngData() {
                     return (pngData, imageType.rawValue)
                 } else {
                     throw ImageCompressionError.compressionFailed
@@ -182,6 +193,10 @@ extension UIImage {
             return CGSize(width: 310, height: 123) // StoreCard
         case .thumbnail:
             return CGSize(width: 80, height: 90)
+        case .avatar:
+            // Square crop, sized for web hero / sharing.
+            // Matches the typical source aspect and avoids upscale blur.
+            return CGSize(width: 800, height: 800)
         }
     }
 
