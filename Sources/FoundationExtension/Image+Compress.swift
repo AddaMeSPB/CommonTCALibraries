@@ -139,10 +139,11 @@ extension UIImage {
         // variants (icon/logo/thumbnail) and missing the chance to cap the
         // new `.avatar` variant at 800×800.
         let sourceImage = resizeImage(passImagesType: passImagesType) ?? self
-        let heicData = try sourceImage.heic(compressionQuality: compressionQuality)
 
         if isHeicSupported {
-            if imageType == .png {
+            switch imageType {
+            case .png:
+                let heicData = try sourceImage.heic(compressionQuality: compressionQuality)
                 do {
                     let pngData = try heicToPng(heicData: heicData, passImagesType: passImagesType)
                     return (pngData, imageType.rawValue)
@@ -150,9 +151,14 @@ extension UIImage {
                     print("Error converting HEIC to PNG: \(error)")
                     throw HEICError.couldNotConvertToPNG
                 }
+            case .jpeg:
+                guard let jpegData = sourceImage.jpegData(
+                    compressionQuality: compressionQuality.rawValue
+                ) else {
+                    throw ImageCompressionError.compressionFailed
+                }
+                return (jpegData, imageType.rawValue)
             }
-
-            return (heicData, "heic")
 
         } else {
             // Resize first so JPEG path also respects the target dimensions
