@@ -1,5 +1,5 @@
 {
-  "originHash" : "3a6e2f51871688d5a1724cf6c901027928cd17d3562b958e848470bf10b2087c",
+  "originHash" : "1f3f4679b7d95cbeede35f32dcada9ec3459dc3941fa92f2fdb3fda036660b1e",
   "pins" : [
     {
       "identity" : "combine-schedulers",
@@ -8,15 +8,6 @@
       "state" : {
         "revision" : "9fa31f4403da54855f1e2aeaeff478f4f0e40b13",
         "version" : "1.0.2"
-      }
-    },
-    {
-      "identity" : "composable-core-location",
-      "kind" : "remoteSourceControl",
-      "location" : "https://github.com/klundberg/composable-core-location.git",
-      "state" : {
-        "branch" : "combine-only",
-        "revision" : "11699e3b841dada859816f3bde6dbc1b381a766f"
       }
     },
     {
@@ -51,8 +42,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-composable-architecture.git",
       "state" : {
-        "revision" : "d602618c628e5123f66643437151079d3664970d",
-        "version" : "1.17.0"
+        "revision" : "1eaa6fa2ee57ac42843283b9fd3457af408c858d",
+        "version" : "1.25.5"
       }
     },
     {
@@ -96,8 +87,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/pointfreeco/swift-navigation",
       "state" : {
-        "revision" : "16a27ab7ae0abfefbbcba73581b3e2380b47a579",
-        "version" : "2.2.2"
+        "revision" : "e7441dc4dfec6a4ae929e614e3c1e67c6639d164",
+        "version" : "2.7.0"
       }
     },
     {
