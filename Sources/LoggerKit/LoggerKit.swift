@@ -27,6 +27,7 @@ public struct LoggerKit : Sendable {
     // MARK: - Private Properties
 
     private let logger: Logger
+    private let categoryName: String
 
     // MARK: - Lifecycle
 
@@ -41,6 +42,38 @@ public struct LoggerKit : Sendable {
     ///   world simulation, and rendering. The default is `default`.
     public init(subsystem: String = Defaults.subsystem, category: Category = .default) {
         self.logger = Logger(subsystem: subsystem, category: category.rawValue)
+        self.categoryName = category.rawValue
+    }
+}
+
+// MARK: - Remote sink (production log shipping)
+
+/// A single log event forwarded to an optional remote sink. Apps install a sink
+/// (e.g. a batching log-ship client) so production failures are visible
+/// server-side, not just in the on-device console. No sink installed → no-op,
+/// so apps that don't opt in are unaffected.
+public struct LogEvent: Sendable {
+    public let level: OSLogType
+    public let category: String
+    public let message: String
+    public let file: String
+    public let line: Int
+    public let function: String
+}
+
+/// Thread-safe holder for the process-wide remote log sink. Set once at launch.
+public enum LoggerKitRemoteSink {
+    nonisolated(unsafe) private static var handler: (@Sendable (LogEvent) -> Void)?
+    private static let lock = NSLock()
+
+    /// Install the remote sink. Subsequent `sharedLogger` calls forward to it.
+    public static func install(_ sink: @escaping @Sendable (LogEvent) -> Void) {
+        lock.lock(); handler = sink; lock.unlock()
+    }
+
+    static func forward(_ event: LogEvent) {
+        lock.lock(); let h = handler; lock.unlock()
+        h?(event)
     }
 }
 
@@ -77,6 +110,12 @@ public extension LoggerKit {
         } else {
             logger.log(level: level, "\(logMessage, privacy: .public)")
         }
+        // Private messages stay on-device; only ship non-private lines.
+        if !isPrivate {
+            LoggerKitRemoteSink.forward(
+                LogEvent(level: level, category: categoryName, message: message,
+                         file: fileName, line: line, function: function))
+        }
     }
 }
 
@@ -111,6 +150,9 @@ public extension LoggerKit {
         let fileName = URL(fileURLWithPath: file).lastPathComponent
         let logMessage = "\(fileName):\(line) - \(function) - \(errorMessage)"
         logger.log(level: level, "\(logMessage, privacy: .public)")
+        LoggerKitRemoteSink.forward(
+            LogEvent(level: level, category: categoryName, message: errorMessage,
+                     file: fileName, line: line, function: function))
     }
 }
 
