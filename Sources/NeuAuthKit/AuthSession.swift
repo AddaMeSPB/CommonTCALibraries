@@ -130,7 +130,17 @@ public actor AuthSession {
                 } catch {
                     throw NeuAuthError.decoding("refresh response: \(error)")
                 }
-                let tokens = grant.toTokens(now: now())
+                var tokens = grant.toTokens(now: now())
+                if tokens.refreshToken == nil {
+                    // RFC 6749 §6: the server MAY omit a new refresh token,
+                    // in which case the old one stays valid — never discard it.
+                    tokens = NeuAuthTokens(
+                        accessToken: tokens.accessToken,
+                        refreshToken: refreshToken,
+                        idToken: tokens.idToken,
+                        expiresAt: tokens.expiresAt
+                    )
+                }
                 try store.saveTokens(tokens)
                 return tokens
             case 401, 403:
@@ -198,6 +208,15 @@ public actor AuthSession {
                 )
             }
             return data
+        }
+
+        // Authed verification endpoints (upgrade verify, merge): a 401 means
+        // "wrong or expired code" — NOT "refresh time". Refresh-retrying here
+        // would re-submit the code (burning a server-side OTP attempt) and
+        // misreport an ordinary typo as session expiry. The bearer was
+        // already pre-refreshed above if locally expired.
+        if case .invalidCode = api.unauthorizedSemantics {
+            throw NeuAuthError.invalidOrExpiredCode
         }
 
         // Reactive 401 → refresh → retry once.

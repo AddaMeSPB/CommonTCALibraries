@@ -127,6 +127,64 @@ struct AuthSessionTests {
         #expect(http.requestCount(pathContains: "users/me") == 1)  // no retry after dead refresh
     }
 
+    @Test("Authed verification 401 maps to invalidOrExpiredCode without refresh/retry")
+    func authedInvalidCodeNoRefresh() async throws {
+        // upgradeVerify is authed but its 401 means "wrong code" — the
+        // transport must NOT refresh-and-resubmit (that burns an OTP attempt
+        // and misreports a typo as session expiry).
+        let http = HTTPStub { request in
+            HTTPStub.response(request, status: 401)
+        }
+        let session = AuthSession(
+            config: Fixture.config,
+            store: InMemoryKeychainStore(
+                tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600))
+            ),
+            http: http.handler,
+            now: { Fixture.now }
+        )
+
+        await #expect(throws: NeuAuthError.invalidOrExpiredCode) {
+            _ = try await session.send(
+                .upgradeVerify(email: "a@b.c", code: "000000", password: nil, displayName: nil)
+            )
+        }
+        #expect(http.requestCount(pathContains: "auth/refresh") == 0)
+        #expect(http.requestCount(pathContains: "upgrade/verify") == 1)  // no resubmission
+    }
+
+    @Test("Refresh response omitting refresh_token keeps the previous one")
+    func refreshWithoutRotationKeepsToken() async throws {
+        let newAccess = Fixture.jwt([
+            "exp": Fixture.now.addingTimeInterval(3600).timeIntervalSince1970
+        ])
+        let http = HTTPStub { request in
+            // RFC 6749 §6 allows the server to omit refresh_token.
+            HTTPStub.response(
+                request, status: 200,
+                body: Data(
+                    """
+                    {"access_token":"\(newAccess)","token_type":"Bearer","expires_in":900}
+                    """.utf8
+                )
+            )
+        }
+        let store = InMemoryKeychainStore(
+            tokens: Fixture.tokens(
+                accessExpiresAt: Fixture.now.addingTimeInterval(-10), refreshToken: "keep-me"
+            )
+        )
+        let session = AuthSession(
+            config: Fixture.config, store: store, http: http.handler, now: { Fixture.now }
+        )
+
+        let refreshed = try await session.refreshTokens()
+        #expect(refreshed.refreshToken == "keep-me")
+        #expect(try store.loadTokens()?.refreshToken == "keep-me")
+        // And the session can refresh again later.
+        #expect(try store.loadTokens()?.accessToken == newAccess)
+    }
+
     @Test("Pre-token endpoints bypass bearer and refresh entirely")
     func preTokenBypass() async throws {
         let http = HTTPStub { request in
