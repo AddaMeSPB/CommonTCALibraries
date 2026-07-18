@@ -41,10 +41,14 @@ let package = Package(
         // MARK: - Offer Redeem
         .library(name: "OfferRedeemClient", targets: ["OfferRedeemClient"]),
         .library(name: "OfferRedeemFeature", targets: ["OfferRedeemFeature"]),
+
+        // MARK: - NeuAuth
+        .library(name: "NeuAuthKit", targets: ["NeuAuthKit"]),
     ],
 
     dependencies: [
       .package(url: "https://github.com/pointfreeco/swift-tagged", from: "0.10.0"),
+      .package(url: "https://github.com/pointfreeco/swift-clocks", from: "1.0.5"),
       .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "1.1.0"),
       .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.1.5"),
       .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.4.3"),
@@ -208,6 +212,23 @@ let package = Package(
                 "OfferRedeemFeature",
                 "OfferRedeemClient",
                 .product(name: "ComposableArchitecture", package: "swift-composable-architecture"),
+            ]
+        ),
+
+        // MARK: - NeuAuth
+        .target(
+            name: "NeuAuthKit",
+            dependencies: [
+                .product(name: "Clocks", package: "swift-clocks"),
+                .product(name: "Dependencies", package: "swift-dependencies"),
+                .product(name: "DependenciesMacros", package: "swift-dependencies"),
+            ]
+        ),
+        .testTarget(
+            name: "NeuAuthKitTests",
+            dependencies: [
+                "NeuAuthKit",
+                .product(name: "Clocks", package: "swift-clocks"),
             ]
         ),
 
