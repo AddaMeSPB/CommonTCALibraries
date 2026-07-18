@@ -445,6 +445,58 @@ struct AuthSessionTests {
         #expect(http.requestCount(pathContains: "auth/refresh") == 1)
     }
 
+    @Test("setTokens re-arms the proactive scheduler for the new session")
+    func proactiveReArmsOnSetTokens() async throws {
+        let clock = TestClock()
+        let store = InMemoryKeychainStore()  // no session at start
+        let http = HTTPStub { request in
+            let newAccess = Fixture.jwt([
+                "exp": Fixture.now.addingTimeInterval(3600).timeIntervalSince1970
+            ])
+            return HTTPStub.response(
+                request, status: 200, body: Fixture.grantJSON(accessToken: newAccess)
+            )
+        }
+        let session = AuthSession(
+            config: Fixture.config, store: store, http: http.handler,
+            clock: clock, now: { Fixture.now }
+        )
+
+        // Started with no session: the loop exits immediately…
+        await session.startProactiveRefresh()
+        await megaYield()
+
+        // …but a later sign-in re-arms it against the new token's expiry.
+        try await session.setTokens(
+            Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(300))
+        )
+        await megaYield()
+        await clock.advance(by: .seconds(180))
+        while http.requestCount(pathContains: "auth/refresh") < 1 {
+            await Task.yield()
+        }
+        #expect(http.requestCount(pathContains: "auth/refresh") == 1)
+        await session.stopProactiveRefresh()
+    }
+
+    @Test("Server-rejected refresh clears the dead session's tokens (device_id kept)")
+    func rejectedRefreshClearsTokens() async throws {
+        let store = InMemoryKeychainStore(
+            tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(-10)),
+            deviceID: "device-1"
+        )
+        let http = HTTPStub { request in HTTPStub.response(request, status: 401) }
+        let session = AuthSession(
+            config: Fixture.config, store: store, http: http.handler, now: { Fixture.now }
+        )
+
+        await #expect(throws: NeuAuthError.unauthorized) {
+            try await session.refreshTokens()
+        }
+        #expect(try store.loadTokens() == nil)
+        #expect(try store.loadDeviceID() == "device-1")
+    }
+
     @Test("Proactive scheduler stops for a non-JWT access token (no 60 s hammering)")
     func proactiveStopsOnUndecodableToken() async throws {
         let clock = TestClock()

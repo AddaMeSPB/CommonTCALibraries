@@ -33,6 +33,11 @@ public actor AuthSession {
 
     private var refreshTask: Task<NeuAuthTokens, Error>?
     private var proactiveTask: Task<Void, Never>?
+    /// Whether the consumer has asked for proactive refresh. Lets
+    /// `setTokens` re-arm the scheduler for a new session (whose loop may
+    /// have exited when there was nothing to keep alive, or be sleeping on
+    /// the old token's expiry).
+    private var proactiveEnabled = false
 
     private let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "NeuAuthKit",
@@ -79,9 +84,13 @@ public actor AuthSession {
     }
 
     /// Persist a fresh token set (after OTP verify, anonymous create,
-    /// upgrade, merge, or WebAuthn sign-in).
+    /// upgrade, merge, or WebAuthn sign-in). If proactive refresh is
+    /// enabled, the scheduler re-arms against the new token's expiry.
     public func setTokens(_ tokens: NeuAuthTokens) throws {
         try store.saveTokens(tokens)
+        if proactiveEnabled {
+            startProactiveRefresh()
+        }
     }
 
     /// Clear tokens only — the anonymous `device_id` survives so a later
@@ -150,7 +159,12 @@ public actor AuthSession {
                 )
             case 401, 403:
                 // The server explicitly rejected the session (revoked,
-                // rotated-away, or account suspended) — it is dead.
+                // rotated-away, or account suspended) — it is dead. Clear
+                // the corpse (CAS-guarded: never touch a session that was
+                // replaced while this refresh was in flight) so subsequent
+                // calls fail fast with notAuthenticated instead of
+                // re-attempting doomed refreshes. device_id is untouched.
+                await self.clearTokensIfRefreshTokenMatches(refreshToken)
                 throw NeuAuthError.unauthorized
             default:
                 throw ResponseMapper.error(
@@ -168,6 +182,13 @@ public actor AuthSession {
             logger.warning("Token refresh failed: \(String(describing: error), privacy: .private)")
             throw error
         }
+    }
+
+    /// CAS-guarded wipe after a server-rejected refresh: only clears if the
+    /// stored session is still the one whose refresh token was rejected.
+    private func clearTokensIfRefreshTokenMatches(_ consumedRefreshToken: String) {
+        guard (try? store.loadTokens())?.refreshToken == consumedRefreshToken else { return }
+        try? store.clearTokens()
     }
 
     /// Actor-serialized persist of a refresh result. No suspension points:
@@ -317,6 +338,7 @@ public actor AuthSession {
     /// through the single-flight path, and re-arms off the new token.
     /// Idempotent — restarting cancels the previous scheduler.
     public func startProactiveRefresh() {
+        proactiveEnabled = true
         proactiveTask?.cancel()
         // NB: once `proactiveLoop()` is executing, `self` is retained across
         // its suspensions regardless of `[weak self]` — a running scheduler
@@ -329,6 +351,7 @@ public actor AuthSession {
     }
 
     public func stopProactiveRefresh() {
+        proactiveEnabled = false
         proactiveTask?.cancel()
         proactiveTask = nil
     }
