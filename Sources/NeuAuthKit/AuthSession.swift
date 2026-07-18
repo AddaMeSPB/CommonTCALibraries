@@ -191,6 +191,13 @@ public actor AuthSession {
         try? store.clearTokens()
     }
 
+    /// CAS-guarded wipe of a specific token set (dead session detected after
+    /// a refreshed bearer was still rejected).
+    private func clearTokensIfMatches(_ tokens: NeuAuthTokens) {
+        guard (try? store.loadTokens()) == tokens else { return }
+        try? store.clearTokens()
+    }
+
     /// Actor-serialized persist of a refresh result. No suspension points:
     /// the load-compare-save below is atomic with respect to `setTokens`,
     /// `clearTokens`, and every other actor-isolated store access.
@@ -271,11 +278,16 @@ public actor AuthSession {
         }
 
         // Reactive 401 → refresh → retry once.
-        let freshToken = try await refreshTokens().accessToken
+        let freshTokens = try await refreshTokens()
         let (retryData, retryResponse) = try await Self.perform(
-            http, api.urlRequest(config: config, accessToken: freshToken)
+            http, api.urlRequest(config: config, accessToken: freshTokens.accessToken)
         )
         if retryResponse.statusCode == 401 {
+            // The server rejected even a freshly-refreshed bearer: the
+            // session is dead. Clear it (CAS-guarded) so a later bootstrap
+            // cannot resurrect it as .authenticated off the unexpired local
+            // copy. device_id is untouched.
+            clearTokensIfMatches(freshTokens)
             throw NeuAuthError.unauthorized
         }
         guard (200...299).contains(retryResponse.statusCode) else {
@@ -376,6 +388,7 @@ public actor AuthSession {
                     return  // cancelled
                 }
             }
+            var failedTransiently = false
             do {
                 try await refreshTokens()
             } catch NeuAuthError.unauthorized, NeuAuthError.notAuthenticated {
@@ -384,13 +397,14 @@ public actor AuthSession {
             } catch is CancellationError {
                 return
             } catch {
-                // Transient (transport/server) — fall through to the floor
-                // sleep below and try again on the next pass.
+                // Transient (transport/server) — back off below and try
+                // again on the next pass.
+                failedTransiently = true
             }
-            if wait <= 0 {
-                // Token already expired / exp-less / refresh failed
-                // transiently: floor the cadence so this can never hot-loop
-                // or retry-storm the server.
+            if wait <= 0 || failedTransiently {
+                // Token already expired / refresh failed transiently: floor
+                // the cadence so an outage at the scheduled refresh time can
+                // never hot-loop or fire back-to-back retries.
                 guard (try? await clock.sleep(for: .seconds(60))) != nil else {
                     return
                 }

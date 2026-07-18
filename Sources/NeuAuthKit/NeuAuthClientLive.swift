@@ -123,6 +123,11 @@ extension NeuAuthClient {
                 let response = try decode(UpgradeCompleteResponse.self, from: data)
                 let complete = response.toUpgradeComplete(now: session.currentDate())
                 try await session.setTokens(complete.tokens)
+                // The anonymous identity ended with this upgrade. Retire its
+                // device id so a future "continue as guest" mints a CLEAN
+                // anonymous account instead of reconnecting an id that now
+                // belongs to a registered user.
+                try await session.clearDeviceID()
                 return complete
             },
             mergeIntoExistingAccount: { targetUserID, code in
@@ -130,6 +135,10 @@ extension NeuAuthClient {
                 let response = try decode(MergeResponse.self, from: data)
                 let result = response.toMergeResult(now: session.currentDate())
                 try await session.setTokens(result.tokens)
+                // The anonymous account was folded into (and deleted from)
+                // the registered one — its device id must not reconnect
+                // anything. A later guest sign-in starts fresh.
+                try await session.clearDeviceID()
                 return result
             },
             webauthnRegisterStart: { label in

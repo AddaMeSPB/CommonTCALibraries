@@ -224,6 +224,51 @@ struct ModelsAndFacadeTests {
         #expect(result == .emailExists(existingUserID: existing))
     }
 
+    @Test("upgrade and merge retire the anonymous device_id")
+    func upgradeAndMergeRetireDeviceID() async throws {
+        let userID = UUID()
+        let upgradeStore = InMemoryKeychainStore(
+            tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600)),
+            deviceID: "anon-device"
+        )
+        let (upgradeClient, _) = makeLive(store: upgradeStore) { request in
+            HTTPStub.response(
+                request, status: 200,
+                body: Data(
+                    """
+                    {"user":{"id":"\(userID.uuidString)","is_anonymous":false,"email":"a@b.c","upgraded_at":"2026-07-18T09:00:00Z"},
+                     "tokens":{"access_token":"at2","refresh_token":"rt2","token_type":"Bearer","expires_in":900},
+                     "data_migrated":{"total_items":3,"by_type":{}}}
+                    """.utf8
+                )
+            )
+        }
+        _ = try await upgradeClient.verifyUpgrade("a@b.c", "123456", nil, nil)
+        // Identity is registered now — the old anonymous id must not linger.
+        #expect(try upgradeStore.loadDeviceID() == nil)
+        #expect(try upgradeStore.loadTokens()?.accessToken == "at2")
+
+        let mergeStore = InMemoryKeychainStore(
+            tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600)),
+            deviceID: "anon-device"
+        )
+        let (mergeClient, _) = makeLive(store: mergeStore) { request in
+            HTTPStub.response(
+                request, status: 200,
+                body: Data(
+                    """
+                    {"merged_into":"\(userID.uuidString)","anonymous_user_deleted":true,
+                     "data_migrated":{"total_items":3,"by_type":{}},
+                     "tokens":{"access_token":"at3","refresh_token":"rt3","token_type":"Bearer","expires_in":900}}
+                    """.utf8
+                )
+            )
+        }
+        _ = try await mergeClient.mergeIntoExistingAccount(userID, "654321")
+        #expect(try mergeStore.loadDeviceID() == nil)
+        #expect(try mergeStore.loadTokens()?.accessToken == "at3")
+    }
+
     @Test("logout clears tokens but keeps device_id; deleteAccount clears both")
     func logoutVsDeleteAccount() async throws {
         let store = InMemoryKeychainStore(

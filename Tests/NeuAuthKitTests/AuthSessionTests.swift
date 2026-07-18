@@ -128,11 +128,13 @@ struct AuthSessionTests {
             }
             return HTTPStub.response(request, status: 401)  // always unauthorized
         }
+        let store = InMemoryKeychainStore(
+            tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600)),
+            deviceID: "device-1"
+        )
         let session = AuthSession(
             config: Fixture.config,
-            store: InMemoryKeychainStore(
-                tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600))
-            ),
+            store: store,
             http: http.handler,
             now: { Fixture.now }
         )
@@ -142,6 +144,10 @@ struct AuthSessionTests {
         }
         #expect(http.requestCount(pathContains: "users/me") == 2)  // attempt + one retry
         #expect(http.requestCount(pathContains: "auth/refresh") == 1)
+        // Dead session may not survive locally: a relaunch bootstrap must
+        // not resurrect it off the unexpired refreshed copy.
+        #expect(try store.loadTokens() == nil)
+        #expect(try store.loadDeviceID() == "device-1")
     }
 
     @Test("Failed refresh surfaces unauthorized without retrying the request")
@@ -495,6 +501,34 @@ struct AuthSessionTests {
         }
         #expect(try store.loadTokens() == nil)
         #expect(try store.loadDeviceID() == "device-1")
+    }
+
+    @Test("Transient failure at the scheduled refresh time backs off, no double-fire")
+    func proactiveTransientBackoff() async throws {
+        let clock = TestClock()
+        let store = InMemoryKeychainStore(
+            tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(300))
+        )
+        let http = HTTPStub { request in HTTPStub.response(request, status: 503) }
+        let session = AuthSession(
+            config: Fixture.config, store: store, http: http.handler,
+            clock: clock, now: { Fixture.now }
+        )
+
+        await session.startProactiveRefresh()
+        await megaYield()
+        await clock.advance(by: .seconds(180))
+        while http.requestCount(pathContains: "auth/refresh") < 1 {
+            await Task.yield()
+        }
+        await megaYield()
+        // Failed transiently — the loop must floor-sleep, not immediately
+        // fire a second request.
+        #expect(http.requestCount(pathContains: "auth/refresh") == 1)
+        await clock.advance(by: .seconds(59))
+        await megaYield()
+        #expect(http.requestCount(pathContains: "auth/refresh") == 1)
+        await session.stopProactiveRefresh()
     }
 
     @Test("Proactive scheduler stops for a non-JWT access token (no 60 s hammering)")
