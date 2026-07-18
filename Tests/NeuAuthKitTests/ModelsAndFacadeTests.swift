@@ -306,8 +306,9 @@ struct ModelsAndFacadeTests {
         #expect(try offlineStore.loadTokens() != nil)
         #expect(try offlineStore.loadDeviceID() == "device-1")
 
-        // Session already dead server-side (401 even after refresh): the
-        // account is unreachable/gone — wipe local state.
+        // Session dead (401 even after refresh): the DELETE did NOT execute.
+        // The error propagates and device_id is KEPT — for an anonymous user
+        // it is the only way back in to actually delete the account.
         let deadStore = InMemoryKeychainStore(
             tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600)),
             deviceID: "device-2"
@@ -315,9 +316,22 @@ struct ModelsAndFacadeTests {
         let (deadClient, _) = makeLive(store: deadStore) { request in
             HTTPStub.response(request, status: 401)
         }
-        try await deadClient.deleteAccount()
-        #expect(try deadStore.loadTokens() == nil)
-        #expect(try deadStore.loadDeviceID() == nil)
+        await #expect(throws: NeuAuthError.unauthorized) {
+            try await deadClient.deleteAccount()
+        }
+        #expect(try deadStore.loadDeviceID() == "device-2")
+
+        // 404: already deleted server-side — idempotent success, full wipe.
+        let goneStore = InMemoryKeychainStore(
+            tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600)),
+            deviceID: "device-3"
+        )
+        let (goneClient, _) = makeLive(store: goneStore) { request in
+            HTTPStub.response(request, status: 404)
+        }
+        try await goneClient.deleteAccount()
+        #expect(try goneStore.loadTokens() == nil)
+        #expect(try goneStore.loadDeviceID() == nil)
     }
 
     @Test("logout still clears local tokens when revocation fails")

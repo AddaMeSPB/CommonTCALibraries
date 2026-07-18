@@ -209,6 +209,7 @@ public actor AuthSession {
             // The session changed while this refresh was in flight (upgrade,
             // merge, new sign-in, or sign-out). The newer session wins;
             // discard the stale refresh result.
+            logger.info("Discarding stale refresh result: session was replaced mid-refresh")
             if let current { return current }
             throw NeuAuthError.notAuthenticated
         }

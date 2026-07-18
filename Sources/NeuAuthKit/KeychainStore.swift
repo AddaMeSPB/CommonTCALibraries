@@ -175,8 +175,13 @@ public struct LiveKeychainStore: KeychainStore {
 
     private func saveData(_ data: Data, account: String, accessible: CFString) throws {
         // Update-then-add: try an in-place update first (keeps the item's
-        // identity/ACL), fall back to add when the item doesn't exist yet.
-        let update: [String: Any] = [kSecValueData as String: data]
+        // identity), fall back to add when the item doesn't exist yet.
+        // Accessibility is included in the update so items written by older
+        // builds migrate to the current policy instead of keeping theirs.
+        let update: [String: Any] = [
+            kSecValueData as String: data,
+            kSecAttrAccessible as String: accessible,
+        ]
         let updateStatus = SecItemUpdate(
             baseQuery(account: account) as CFDictionary,
             update as CFDictionary

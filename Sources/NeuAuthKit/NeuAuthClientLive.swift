@@ -73,10 +73,19 @@ extension NeuAuthClient {
             deleteAccount: {
                 do {
                     _ = try await session.send(.deleteAccount())
-                } catch NeuAuthError.unauthorized, NeuAuthError.notFound {
-                    // The session/account is already dead server-side (e.g.
-                    // deletion committed but the response was lost) — treat
-                    // as deleted and fall through to the local wipe.
+                } catch NeuAuthError.notFound {
+                    // Already deleted server-side (e.g. the DELETE committed
+                    // but the response was lost) — idempotent success; fall
+                    // through to the local wipe.
+                } catch NeuAuthError.unauthorized {
+                    // The SESSION is dead — that does NOT mean the DELETE
+                    // executed. The account may still exist server-side, and
+                    // for an anonymous user the device_id is the only way
+                    // back in (sign in anonymously again → real delete). So:
+                    // keep device_id, stop the scheduler, and rethrow so the
+                    // caller knows deletion did not happen.
+                    await session.stopProactiveRefresh()
+                    throw NeuAuthError.unauthorized
                 } // Transport/other errors rethrow: account still exists,
                   // keep local state so the user can retry.
                 await session.stopProactiveRefresh()
@@ -126,8 +135,14 @@ extension NeuAuthClient {
                 // The anonymous identity ended with this upgrade. Retire its
                 // device id so a future "continue as guest" mints a CLEAN
                 // anonymous account instead of reconnecting an id that now
-                // belongs to a registered user.
-                try await session.clearDeviceID()
+                // belongs to a registered user. Best-effort: the upgrade
+                // already succeeded server-side and locally — a keychain
+                // hiccup here must not surface as an operation failure.
+                do {
+                    try await session.clearDeviceID()
+                } catch {
+                    logger.warning("Failed to retire anonymous device_id after upgrade")
+                }
                 return complete
             },
             mergeIntoExistingAccount: { targetUserID, code in
@@ -137,8 +152,13 @@ extension NeuAuthClient {
                 try await session.setTokens(result.tokens)
                 // The anonymous account was folded into (and deleted from)
                 // the registered one — its device id must not reconnect
-                // anything. A later guest sign-in starts fresh.
-                try await session.clearDeviceID()
+                // anything. A later guest sign-in starts fresh. Best-effort:
+                // the merge already succeeded.
+                do {
+                    try await session.clearDeviceID()
+                } catch {
+                    logger.warning("Failed to retire anonymous device_id after merge")
+                }
                 return result
             },
             webauthnRegisterStart: { label in
