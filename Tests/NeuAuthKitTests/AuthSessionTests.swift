@@ -114,6 +114,41 @@ struct AuthSessionTests {
         #expect(try store.loadTokens() == upgraded)
     }
 
+    @Test("A 401'd request aborts (sessionReplaced) if a new session landed mid-flight")
+    func staleRequestAbortsOnSessionReplacement() async throws {
+        let gate = Gate()
+        let http = HTTPStub { request in
+            await gate.wait()
+            return HTTPStub.response(request, status: 401)
+        }
+        let store = InMemoryKeychainStore(
+            tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600))
+        )
+        let session = AuthSession(
+            config: Fixture.config, store: store, http: http.handler, now: { Fixture.now }
+        )
+
+        let sendTask = Task { try await session.send(.deleteAccount()) }
+        while http.requestCount(pathContains: "users/me") < 1 {
+            await Task.yield()
+        }
+        // A different account signs in while the DELETE is in flight.
+        let replacement = NeuAuthTokens(
+            accessToken: "new-at", refreshToken: "new-rt", idToken: nil,
+            expiresAt: Fixture.now.addingTimeInterval(900)
+        )
+        try await session.setTokens(replacement)
+        await gate.open()
+
+        // The stale DELETE must NOT refresh-and-retry under the new account.
+        await #expect(throws: NeuAuthError.sessionReplaced) {
+            _ = try await sendTask.value
+        }
+        #expect(http.requestCount(pathContains: "users/me") == 1)  // no retry
+        #expect(http.requestCount(pathContains: "auth/refresh") == 0)
+        #expect(try store.loadTokens() == replacement)  // untouched
+    }
+
     // MARK: - Retry-once semantics
 
     @Test("401 after successful refresh throws unauthorized (no retry storm)")

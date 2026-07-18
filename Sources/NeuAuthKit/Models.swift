@@ -43,6 +43,7 @@ public struct NeuAuthUserProfile: Codable, Equatable, Sendable {
     public let emailVerified: Bool?
     public let displayName: String?
     public let avatarURL: String?
+    public let phone: String?
     public let roles: [String]?
     public let tenantID: UUID?
 
@@ -52,6 +53,7 @@ public struct NeuAuthUserProfile: Codable, Equatable, Sendable {
         emailVerified: Bool?,
         displayName: String?,
         avatarURL: String?,
+        phone: String?,
         roles: [String]?,
         tenantID: UUID?
     ) {
@@ -60,12 +62,13 @@ public struct NeuAuthUserProfile: Codable, Equatable, Sendable {
         self.emailVerified = emailVerified
         self.displayName = displayName
         self.avatarURL = avatarURL
+        self.phone = phone
         self.roles = roles
         self.tenantID = tenantID
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, email, roles
+        case id, email, phone, roles
         case emailVerified = "email_verified"
         case displayName = "display_name"
         case avatarURL = "avatar_url"

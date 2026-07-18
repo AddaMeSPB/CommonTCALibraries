@@ -139,7 +139,7 @@ struct ModelsAndFacadeTests {
                 """
                 {"access_token":"at-new","token_type":"Bearer","expires_in":900,"refresh_token":"rt-new",
                  "user":{"id":"\(userID.uuidString)","email":"a@b.c","email_verified":true,"display_name":null,
-                         "avatar_url":null,"phone":null,"roles":["user"],"tenant_id":"\(tenantID.uuidString)"}}
+                         "avatar_url":null,"phone":"+351911700000","roles":["user"],"tenant_id":"\(tenantID.uuidString)"}}
                 """.utf8
             )
             return HTTPStub.response(request, status: 200, body: body)
@@ -148,6 +148,7 @@ struct ModelsAndFacadeTests {
         let result = try await client.verifyEmailCode("a@b.c", "123456")
         #expect(result.user?.id == userID)
         #expect(result.user?.email == "a@b.c")
+        #expect(result.user?.phone == "+351911700000")
         #expect(result.tokens.accessToken == "at-new")
         #expect(try store.loadTokens() == result.tokens)
     }

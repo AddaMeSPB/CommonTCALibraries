@@ -33,6 +33,11 @@ public actor AuthSession {
 
     private var refreshTask: Task<NeuAuthTokens, Error>?
     private var proactiveTask: Task<Void, Never>?
+    /// Identity of the CURRENT session, bumped whenever the session itself
+    /// changes (sign-in/upgrade/merge via `setTokens`, sign-out via
+    /// `clearTokens`) but NOT by token rotation during refresh. In-flight
+    /// operations capture it to detect that "their" session was replaced.
+    private var sessionGeneration: UInt64 = 0
     /// Whether the consumer has asked for proactive refresh. Lets
     /// `setTokens` re-arm the scheduler for a new session (whose loop may
     /// have exited when there was nothing to keep alive, or be sleeping on
@@ -87,6 +92,7 @@ public actor AuthSession {
     /// upgrade, merge, or WebAuthn sign-in). If proactive refresh is
     /// enabled, the scheduler re-arms against the new token's expiry.
     public func setTokens(_ tokens: NeuAuthTokens) throws {
+        sessionGeneration += 1
         try store.saveTokens(tokens)
         if proactiveEnabled {
             startProactiveRefresh()
@@ -96,7 +102,26 @@ public actor AuthSession {
     /// Clear tokens only — the anonymous `device_id` survives so a later
     /// anonymous create reconnects the same account.
     public func clearTokens() throws {
+        sessionGeneration += 1
         try store.clearTokens()
+    }
+
+    /// The current session's generation, for later CAS-style checks.
+    func currentSessionGeneration() -> UInt64 {
+        sessionGeneration
+    }
+
+    /// CAS clear: wipe tokens only if the session generation is unchanged —
+    /// lets flows that finished an operation for a specific session (e.g.
+    /// account deletion) avoid signing out a session that replaced it while
+    /// the operation was in flight. Survives token ROTATION (rotation keeps
+    /// the generation). Returns whether the clear happened.
+    @discardableResult
+    func clearTokensIfGenerationMatches(_ generation: UInt64) throws -> Bool {
+        guard generation == sessionGeneration else { return false }
+        sessionGeneration += 1
+        try store.clearTokens()
+        return true
     }
 
     /// Unverified claims off the current access token (display/scheduling only).
@@ -188,6 +213,7 @@ public actor AuthSession {
     /// stored session is still the one whose refresh token was rejected.
     private func clearTokensIfRefreshTokenMatches(_ consumedRefreshToken: String) {
         guard (try? store.loadTokens())?.refreshToken == consumedRefreshToken else { return }
+        sessionGeneration += 1
         try? store.clearTokens()
     }
 
@@ -195,6 +221,7 @@ public actor AuthSession {
     /// a refreshed bearer was still rejected).
     private func clearTokensIfMatches(_ tokens: NeuAuthTokens) {
         guard (try? store.loadTokens()) == tokens else { return }
+        sessionGeneration += 1
         try? store.clearTokens()
     }
 
@@ -249,6 +276,10 @@ public actor AuthSession {
         guard let tokens = try store.loadTokens() else {
             throw NeuAuthError.notAuthenticated
         }
+        // Identity of the session this operation was issued for. Token
+        // ROTATION keeps the generation; only a session replacement
+        // (sign-in/upgrade/merge/sign-out) bumps it.
+        let generation = sessionGeneration
         // Proactively refresh a locally-expired token so the first attempt
         // already carries a good bearer (still funneled through the
         // single-flight task, so this cannot race the reactive path).
@@ -276,8 +307,23 @@ public actor AuthSession {
         // would re-submit the code (burning a server-side OTP attempt) and
         // misreport an ordinary typo as session expiry. The bearer was
         // already pre-refreshed above if locally expired.
+        //
+        // Accepted limitation: NeuAuth's bearer middleware and its OTP
+        // handlers both emit `{"error":"unauthorized"}`, so a REVOKED (yet
+        // locally-unexpired) bearer on these endpoints also surfaces as
+        // invalidOrExpiredCode. Distinguishing would mean matching on
+        // human-readable message text — deliberately not done; the user
+        // re-requests a code and the next call refreshes.
         if case .invalidCode = api.unauthorizedSemantics {
             throw NeuAuthError.invalidOrExpiredCode
+        }
+
+        // The 401 may be stale: if a different session landed after the
+        // first attempt was issued, do NOT refresh-and-retry the original
+        // operation under the NEW account's bearer (a pending DELETE
+        // /users/me must never execute against a replacement session).
+        guard generation == sessionGeneration else {
+            throw NeuAuthError.sessionReplaced
         }
 
         // Reactive 401 → refresh → retry once.

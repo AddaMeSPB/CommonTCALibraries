@@ -71,6 +71,11 @@ extension NeuAuthClient {
                 try await session.clearTokens()
             },
             deleteAccount: {
+                // Capture the deleted session's generation so a session that
+                // lands mid-flight (rare, but possible) is never signed out
+                // by the post-success cleanup below. Token rotation during
+                // the request keeps the generation, so cleanup still runs.
+                let generation = await session.currentSessionGeneration()
                 do {
                     _ = try await session.send(.deleteAccount())
                 } catch NeuAuthError.notFound {
@@ -88,10 +93,14 @@ extension NeuAuthClient {
                     throw NeuAuthError.unauthorized
                 } // Transport/other errors rethrow: account still exists,
                   // keep local state so the user can retry.
-                await session.stopProactiveRefresh()
-                try await session.clearTokens()
-                // Account is gone — the device id must not reconnect anything.
-                try await session.clearDeviceID()
+                // CAS cleanup: only wipe if the deleted session is still the
+                // current one; a replacement session (and its scheduler)
+                // survives untouched.
+                if try await session.clearTokensIfGenerationMatches(generation) {
+                    await session.stopProactiveRefresh()
+                    // Account is gone — its device id must not reconnect.
+                    try await session.clearDeviceID()
+                }
             },
             sendEmailCode: { email, purpose in
                 let data = try await session.send(.otpSend(email: email, purpose: purpose))
