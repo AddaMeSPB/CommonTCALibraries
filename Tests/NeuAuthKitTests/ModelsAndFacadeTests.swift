@@ -245,6 +245,36 @@ struct ModelsAndFacadeTests {
         #expect(try store.loadDeviceID() == nil)
     }
 
+    @Test("deleteAccount keeps local state on transport failure, wipes on dead-session 401")
+    func deleteAccountFailureModes() async throws {
+        // Offline: the account still exists server-side — keep everything.
+        let offlineStore = InMemoryKeychainStore(
+            tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600)),
+            deviceID: "device-1"
+        )
+        let (offlineClient, _) = makeLive(store: offlineStore) { _ in
+            throw URLError(.notConnectedToInternet)
+        }
+        await #expect(throws: NeuAuthError.self) {
+            try await offlineClient.deleteAccount()
+        }
+        #expect(try offlineStore.loadTokens() != nil)
+        #expect(try offlineStore.loadDeviceID() == "device-1")
+
+        // Session already dead server-side (401 even after refresh): the
+        // account is unreachable/gone — wipe local state.
+        let deadStore = InMemoryKeychainStore(
+            tokens: Fixture.tokens(accessExpiresAt: Fixture.now.addingTimeInterval(600)),
+            deviceID: "device-2"
+        )
+        let (deadClient, _) = makeLive(store: deadStore) { request in
+            HTTPStub.response(request, status: 401)
+        }
+        try await deadClient.deleteAccount()
+        #expect(try deadStore.loadTokens() == nil)
+        #expect(try deadStore.loadDeviceID() == nil)
+    }
+
     @Test("logout still clears local tokens when revocation fails")
     func logoutOfflineStillClears() async throws {
         let store = InMemoryKeychainStore(

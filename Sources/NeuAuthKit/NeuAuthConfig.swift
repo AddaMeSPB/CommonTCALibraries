@@ -12,6 +12,10 @@ public struct NeuAuthConfig: Sendable, Equatable {
     /// unauthenticated flows.
     public let clientID: String
     /// Space-separated OIDC scopes (e.g. `"openid profile email"`).
+    ///
+    /// Reserved for a future OAuth2 authorize-code flow (PKCE helpers ship in
+    /// this package). The OTP / anonymous / WebAuthn endpoints in the current
+    /// surface do not send scopes.
     public let scopes: String
 
     public init(issuerBaseURL: URL, clientID: String, scopes: String) {

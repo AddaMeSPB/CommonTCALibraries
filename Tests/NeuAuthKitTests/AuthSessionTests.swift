@@ -71,6 +71,47 @@ struct AuthSessionTests {
         #expect(try store.loadTokens()?.refreshToken == "refresh-2")
     }
 
+    @Test("A refresh finishing after the session was replaced cannot clobber the new session")
+    func refreshCannotClobberNewerSession() async throws {
+        let gate = Gate()
+        let http = HTTPStub { request in
+            await gate.wait()  // hold the refresh in flight
+            let staleAccess = Fixture.jwt([
+                "exp": Fixture.now.addingTimeInterval(3600).timeIntervalSince1970
+            ])
+            return HTTPStub.response(
+                request, status: 200,
+                body: Fixture.grantJSON(accessToken: staleAccess, refreshToken: "stale-rt")
+            )
+        }
+        let store = InMemoryKeychainStore(
+            tokens: Fixture.tokens(
+                accessExpiresAt: Fixture.now.addingTimeInterval(-10), refreshToken: "anon-rt"
+            )
+        )
+        let session = AuthSession(
+            config: Fixture.config, store: store, http: http.handler, now: { Fixture.now }
+        )
+
+        let refreshTask = Task { try await session.refreshTokens() }
+        while http.requestCount(pathContains: "auth/refresh") < 1 {
+            await Task.yield()
+        }
+
+        // Upgrade completes mid-refresh: a brand-new registered session lands.
+        let upgraded = NeuAuthTokens(
+            accessToken: "upgraded-at", refreshToken: "upgraded-rt", idToken: nil,
+            expiresAt: Fixture.now.addingTimeInterval(900)
+        )
+        try await session.setTokens(upgraded)
+        await gate.open()
+
+        // The stale refresh result is discarded; callers get the new session.
+        let result = try await refreshTask.value
+        #expect(result == upgraded)
+        #expect(try store.loadTokens() == upgraded)
+    }
+
     // MARK: - Retry-once semantics
 
     @Test("401 after successful refresh throws unauthorized (no retry storm)")
@@ -402,6 +443,28 @@ struct AuthSessionTests {
         await clock.advance(by: .seconds(3600))
         await megaYield()
         #expect(http.requestCount(pathContains: "auth/refresh") == 1)
+    }
+
+    @Test("Proactive scheduler stops for a non-JWT access token (no 60 s hammering)")
+    func proactiveStopsOnUndecodableToken() async throws {
+        let clock = TestClock()
+        let store = InMemoryKeychainStore(
+            tokens: NeuAuthTokens(
+                accessToken: "opaque-not-a-jwt", refreshToken: "rt", idToken: nil,
+                expiresAt: Fixture.now.addingTimeInterval(300)
+            )
+        )
+        let http = HTTPStub { request in HTTPStub.response(request, status: 200) }
+        let session = AuthSession(
+            config: Fixture.config, store: store, http: http.handler,
+            clock: clock, now: { Fixture.now }
+        )
+
+        await session.startProactiveRefresh()
+        await megaYield()
+        await clock.advance(by: .seconds(3600))
+        await megaYield()
+        #expect(http.requests.isEmpty)
     }
 
     // MARK: - validAccessToken

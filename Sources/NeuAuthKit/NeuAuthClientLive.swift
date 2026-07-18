@@ -63,7 +63,7 @@ extension NeuAuthClient {
                         _ = try await session.send(.logout(refreshToken: refreshToken))
                     } catch {
                         logger.warning(
-                            "Logout revocation failed (clearing local tokens anyway): \(String(describing: error), privacy: .public)"
+                            "Logout revocation failed (clearing local tokens anyway): \(String(describing: error), privacy: .private)"
                         )
                     }
                 }
@@ -71,7 +71,14 @@ extension NeuAuthClient {
                 try await session.clearTokens()
             },
             deleteAccount: {
-                _ = try await session.send(.deleteAccount())
+                do {
+                    _ = try await session.send(.deleteAccount())
+                } catch NeuAuthError.unauthorized, NeuAuthError.notFound {
+                    // The session/account is already dead server-side (e.g.
+                    // deletion committed but the response was lost) — treat
+                    // as deleted and fall through to the local wipe.
+                } // Transport/other errors rethrow: account still exists,
+                  // keep local state so the user can retry.
                 await session.stopProactiveRefresh()
                 try await session.clearTokens()
                 // Account is gone — the device id must not reconnect anything.

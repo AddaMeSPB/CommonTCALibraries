@@ -115,7 +115,7 @@ public actor AuthSession {
         if let inFlight = refreshTask {
             return try await inFlight.value
         }
-        let task = Task<NeuAuthTokens, Error> { [config, store, http, now] in
+        let task = Task<NeuAuthTokens, Error> { [self, config, store, http, now] in
             guard let refreshToken = (try? store.loadTokens())?.refreshToken else {
                 throw NeuAuthError.notAuthenticated
             }
@@ -141,8 +141,13 @@ public actor AuthSession {
                         expiresAt: tokens.expiresAt
                     )
                 }
-                try store.saveTokens(tokens)
-                return tokens
+                // Persist on the actor with a compare-and-swap against the
+                // refresh token this task consumed, so a session that was
+                // replaced mid-refresh (e.g. anonymous → upgraded account via
+                // setTokens) can never be clobbered by a stale refresh result.
+                return try await self.commitRefreshedTokens(
+                    tokens, consumedRefreshToken: refreshToken
+                )
             case 401, 403:
                 // The server explicitly rejected the session (revoked,
                 // rotated-away, or account suspended) — it is dead.
@@ -160,9 +165,34 @@ public actor AuthSession {
             logger.debug("Token refresh succeeded")
             return tokens
         } catch {
-            logger.warning("Token refresh failed: \(String(describing: error), privacy: .public)")
+            logger.warning("Token refresh failed: \(String(describing: error), privacy: .private)")
             throw error
         }
+    }
+
+    /// Actor-serialized persist of a refresh result. No suspension points:
+    /// the load-compare-save below is atomic with respect to `setTokens`,
+    /// `clearTokens`, and every other actor-isolated store access.
+    private func commitRefreshedTokens(
+        _ tokens: NeuAuthTokens, consumedRefreshToken: String
+    ) throws -> NeuAuthTokens {
+        let current = try? store.loadTokens()
+        guard current?.refreshToken == consumedRefreshToken else {
+            // The session changed while this refresh was in flight (upgrade,
+            // merge, new sign-in, or sign-out). The newer session wins;
+            // discard the stale refresh result.
+            if let current { return current }
+            throw NeuAuthError.notAuthenticated
+        }
+        do {
+            try store.saveTokens(tokens)
+        } catch {
+            // With refresh-token rotation the old token may already be dead,
+            // so losing this write can strand the session. One immediate
+            // retry covers transient keychain failures.
+            try store.saveTokens(tokens)
+        }
+        return tokens
     }
 
     // MARK: - Transport
@@ -288,6 +318,11 @@ public actor AuthSession {
     /// Idempotent — restarting cancels the previous scheduler.
     public func startProactiveRefresh() {
         proactiveTask?.cancel()
+        // NB: once `proactiveLoop()` is executing, `self` is retained across
+        // its suspensions regardless of `[weak self]` — a running scheduler
+        // keeps the session alive until `stopProactiveRefresh()` (or session
+        // death) cancels it. Fine for the intended one-session-per-app use;
+        // do not rely on deinit to stop the loop.
         proactiveTask = Task { [weak self] in
             await self?.proactiveLoop()
         }
@@ -303,8 +338,16 @@ public actor AuthSession {
             guard let tokens = try? store.loadTokens(), tokens.refreshToken != nil else {
                 return  // nothing to keep alive
             }
-            let wait = JWTClaims(unverifiedJWT: tokens.accessToken)?
-                .secondsUntilExpiry(buffer: 120, now: now()) ?? 0
+            guard let claims = JWTClaims(unverifiedJWT: tokens.accessToken),
+                  claims.expiresAt != nil
+            else {
+                // No readable `exp` → nothing sensible to schedule. Stop
+                // instead of settling into a permanent 60 s refresh cadence;
+                // the reactive 401 path still keeps the session working.
+                logger.info("Proactive refresh stopped: access token has no readable exp claim")
+                return
+            }
+            let wait = claims.secondsUntilExpiry(buffer: 120, now: now())
             if wait > 0 {
                 guard (try? await clock.sleep(for: .seconds(wait))) != nil else {
                     return  // cancelled

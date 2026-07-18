@@ -116,7 +116,12 @@ public struct LiveKeychainStore: KeychainStore {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .secondsSince1970
         let data = try encoder.encode(tokens)
-        try saveData(data, account: tokensAccount)
+        // Tokens are device-bound: ThisDeviceOnly keeps them out of backups
+        // and device migrations (server sessions shouldn't hop devices).
+        try saveData(
+            data, account: tokensAccount,
+            accessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        )
     }
 
     public func clearTokens() throws {
@@ -131,7 +136,13 @@ public struct LiveKeychainStore: KeychainStore {
     }
 
     public func saveDeviceID(_ deviceID: String) throws {
-        try saveData(Data(deviceID.utf8), account: deviceIDAccount)
+        // Unlike tokens, the device id intentionally survives backup restore
+        // and device migration: it lets the user reconnect the same anonymous
+        // account (same closet) on their new/restored device.
+        try saveData(
+            Data(deviceID.utf8), account: deviceIDAccount,
+            accessible: kSecAttrAccessibleAfterFirstUnlock
+        )
     }
 
     public func clearDeviceID() throws {
@@ -162,7 +173,7 @@ public struct LiveKeychainStore: KeychainStore {
         return data
     }
 
-    private func saveData(_ data: Data, account: String) throws {
+    private func saveData(_ data: Data, account: String, accessible: CFString) throws {
         // Update-then-add: try an in-place update first (keeps the item's
         // identity/ACL), fall back to add when the item doesn't exist yet.
         let update: [String: Any] = [kSecValueData as String: data]
@@ -177,7 +188,7 @@ public struct LiveKeychainStore: KeychainStore {
 
         var add = baseQuery(account: account)
         add[kSecValueData as String] = data
-        add[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        add[kSecAttrAccessible as String] = accessible
         let addStatus = SecItemAdd(add as CFDictionary, nil)
         guard addStatus == errSecSuccess else {
             throw NeuAuthError.keychain(status: addStatus)
