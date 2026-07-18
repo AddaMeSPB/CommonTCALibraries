@@ -52,7 +52,7 @@ let package = Package(
       .package(url: "https://github.com/pointfreeco/swift-case-paths", from: "1.1.0"),
       .package(url: "https://github.com/pointfreeco/swift-dependencies", from: "1.1.5"),
       .package(url: "https://github.com/pointfreeco/xctest-dynamic-overlay", from: "1.4.3"),
-      .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.25.0"),
+      .package(url: "https://github.com/pointfreeco/swift-composable-architecture.git", from: "1.26.0"),
     ],
 
     targets: [
