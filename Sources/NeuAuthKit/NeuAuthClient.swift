@@ -87,8 +87,11 @@ public struct NeuAuthClient: Sendable {
     public var webauthnRegisterFinish: @Sendable (
         _ challengeKey: String, _ credential: JSONValue, _ label: String?
     ) async throws -> WebAuthnCredentialInfo
-    /// `POST /webauthn/authenticate/start` (pre-token).
-    public var webauthnAuthenticateStart: @Sendable (_ userID: UUID?) async throws -> WebAuthnChallenge
+    /// `POST /webauthn/authenticate/start` (pre-token). NeuAuth requires the
+    /// user id — discoverable/usernameless passkey flows are not supported
+    /// server-side yet (the app knows the id from the stored session or a
+    /// prior sign-in).
+    public var webauthnAuthenticateStart: @Sendable (_ userID: UUID) async throws -> WebAuthnChallenge
     /// `POST /webauthn/authenticate/finish` (pre-token) — completes passkey
     /// sign-in and persists tokens.
     public var webauthnAuthenticateFinish: @Sendable (

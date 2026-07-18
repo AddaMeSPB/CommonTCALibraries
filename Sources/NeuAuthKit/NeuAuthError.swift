@@ -15,6 +15,11 @@ public enum NeuAuthError: Error, Equatable, Sendable {
     /// A verification code was wrong or expired (401 on an OTP-verify-style
     /// endpoint — NOT a session problem).
     case invalidOrExpiredCode
+    /// The session was replaced while the operation was in flight (e.g. an
+    /// upgrade/merge/sign-in landed during a token refresh). The original
+    /// operation was aborted so it cannot execute under the NEW account —
+    /// re-issue it explicitly if it is still wanted.
+    case sessionReplaced
     /// 429 from the server. `retryAfterSeconds` when the envelope carries it.
     case rateLimited(retryAfterSeconds: Int?)
     /// 400 with the NeuAuth `{ "error": code, "message": … }` envelope.
@@ -40,6 +45,7 @@ extension NeuAuthError: LocalizedError {
         case .notAuthenticated: return "Not signed in"
         case .unauthorized: return "Session expired — please sign in again"
         case .invalidOrExpiredCode: return "Invalid or expired verification code"
+        case .sessionReplaced: return "The session changed — please try again"
         case .rateLimited: return "Too many attempts — please try again later"
         case .badRequest(_, let message): return message ?? "Invalid request"
         case .forbidden(_, let message): return message ?? "Not allowed"

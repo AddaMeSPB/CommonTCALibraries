@@ -106,9 +106,11 @@ struct AuthSessionTests {
         try await session.setTokens(upgraded)
         await gate.open()
 
-        // The stale refresh result is discarded; callers get the new session.
-        let result = try await refreshTask.value
-        #expect(result == upgraded)
+        // The stale refresh is discarded AND the awaiting operation aborts —
+        // it must not silently continue under the NEW account's bearer.
+        await #expect(throws: NeuAuthError.sessionReplaced) {
+            _ = try await refreshTask.value
+        }
         #expect(try store.loadTokens() == upgraded)
     }
 

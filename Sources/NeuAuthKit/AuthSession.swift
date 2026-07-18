@@ -207,11 +207,13 @@ public actor AuthSession {
         let current = try? store.loadTokens()
         guard current?.refreshToken == consumedRefreshToken else {
             // The session changed while this refresh was in flight (upgrade,
-            // merge, new sign-in, or sign-out). The newer session wins;
-            // discard the stale refresh result.
-            logger.info("Discarding stale refresh result: session was replaced mid-refresh")
-            if let current { return current }
-            throw NeuAuthError.notAuthenticated
+            // merge, new sign-in, or sign-out). The newer session wins; the
+            // stale refresh result is discarded AND the awaiting operation is
+            // aborted — handing it the replacement session's bearer would let
+            // a request issued for the OLD account (e.g. a pending DELETE
+            // /users/me) execute against the NEW one.
+            logger.info("Aborting stale refresh: session was replaced mid-refresh")
+            throw NeuAuthError.sessionReplaced
         }
         do {
             try store.saveTokens(tokens)
@@ -334,9 +336,19 @@ public actor AuthSession {
             return .authenticated(fresh)
         } catch let error as NeuAuthError {
             switch error {
-            case .unauthorized, .notAuthenticated:
+            case .unauthorized:
+                // refreshTokens already cleared the dead tokens (CAS-guarded,
+                // so a concurrently-established new session is never wiped).
+                return .expired
+            case .notAuthenticated:
                 try? store.clearTokens()
                 return .expired
+            case .sessionReplaced:
+                // A new session landed while we were refreshing — report it.
+                if let current = try? store.loadTokens() {
+                    return .authenticated(current)
+                }
+                return .noSession
             default:
                 return .offline(tokens)
             }
@@ -394,6 +406,10 @@ public actor AuthSession {
                 try await refreshTokens()
             } catch NeuAuthError.unauthorized, NeuAuthError.notAuthenticated {
                 logger.info("Proactive refresh stopped: session is no longer valid")
+                return
+            } catch NeuAuthError.sessionReplaced {
+                // A new session landed mid-refresh; setTokens already re-armed
+                // a fresh scheduler and cancelled this one — bow out.
                 return
             } catch is CancellationError {
                 return

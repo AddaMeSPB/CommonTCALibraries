@@ -235,11 +235,13 @@ extension APIRequest {
         )
     }
 
-    static func webauthnAuthenticateStart(userID: UUID?) -> APIRequest {
+    /// NB: `user_id` is REQUIRED by the current NeuAuth implementation —
+    /// discoverable/usernameless flows are not supported server-side yet.
+    static func webauthnAuthenticateStart(userID: UUID) -> APIRequest {
         APIRequest(
             method: "POST",
             path: "api/v1/webauthn/authenticate/start",
-            body: jsonBody(["user_id": userID.map { $0.uuidString.lowercased() }]),
+            body: jsonBody(["user_id": userID.uuidString.lowercased()]),
             requiresAuth: false
         )
     }
@@ -259,12 +261,15 @@ extension APIRequest {
         let body = (try? NeuAuthJSON.encoder().encode(
             Body(challengeKey: challengeKey, credential: credential)
         )) ?? Data("{}".utf8)
+        // 401 here means the assertion itself failed (or membership is
+        // inactive) — there is no "code" involved, so session semantics
+        // (`.unauthorized`) apply. The endpoint is pre-token, so this can
+        // never trigger a refresh loop.
         return APIRequest(
             method: "POST",
             path: "api/v1/webauthn/authenticate/finish",
             body: body,
-            requiresAuth: false,
-            unauthorizedSemantics: .invalidCode
+            requiresAuth: false
         )
     }
 }

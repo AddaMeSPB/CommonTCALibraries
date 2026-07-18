@@ -20,7 +20,7 @@ struct EndpointRequestTests {
             .merge(targetUserID: UUID(), code: "123456"),
             .webauthnRegisterStart(label: nil),
             .webauthnRegisterFinish(challengeKey: "ck", credential: .object([:]), label: nil),
-            .webauthnAuthenticateStart(userID: nil),
+            .webauthnAuthenticateStart(userID: UUID()),
             .webauthnAuthenticateFinish(challengeKey: "ck", credential: .object([:])),
         ]
         for request in requests {
@@ -185,7 +185,7 @@ struct EndpointRequestTests {
         #expect(finish.requiresAuth == true)
     }
 
-    @Test("WebAuthn authenticate: pre-token, invalid-code 401 on finish")
+    @Test("WebAuthn authenticate: pre-token, required user_id, session-semantics 401 on finish")
     func webauthnAuthenticate() {
         let userID = UUID()
         let start = APIRequest.webauthnAuthenticateStart(userID: userID)
@@ -198,8 +198,9 @@ struct EndpointRequestTests {
             challengeKey: "ck-2", credential: .object([:])
         )
         #expect(finish.requiresAuth == false)
-        guard case .invalidCode = finish.unauthorizedSemantics else {
-            Issue.record("authenticate/finish 401 must map to invalidOrExpiredCode")
+        // A failed assertion is an authentication failure, not a wrong code.
+        guard case .session = finish.unauthorizedSemantics else {
+            Issue.record("authenticate/finish 401 must map to unauthorized")
             return
         }
     }
